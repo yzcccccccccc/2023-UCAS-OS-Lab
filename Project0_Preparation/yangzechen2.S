@@ -6,7 +6,7 @@ main:
     li  t1, 100                 # t1 is the upper boundary of the loop
 Loop1:
     mv      a0, t0              # a0: val to check
-    li      a1, zero            # a1: 1 for prime, 0 for non-prime
+    li      a1, 0               # a1: 1 for prime, 0 for non-prime
     call    prime_checker
     addi    t0, t0, 1
     ble     t0, t1, Loop1
