@@ -1,7 +1,7 @@
 .global main
 main:
 
-// TODO: [p0-task1] Add your code here!
+# TODO: [p0-task1] Add your code here!
     li  t0, 0                 # t0 is used for saving the total sum
     li  t1, 1                 # t1 is used as the iterator
     li  t2, 100               # t2 is the upper boundary of the loop
