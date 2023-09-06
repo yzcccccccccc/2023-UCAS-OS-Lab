@@ -78,6 +78,14 @@ int main(void)
 
     // TODO: Load tasks by either task id [p1-task3] or task name [p1-task4],
     //   and then execute them.
+    char ch;
+    while (1){
+        ch = port_read_ch();
+        if (ch == -1)
+            continue;
+        else
+            port_write_ch(ch);
+    }
 
     // Infinite while loop, where CPU stays in a low-power state (QAQQQQQQQQQQQ)
     while (1)
