@@ -22,7 +22,17 @@ main:
 	jal		bios_func_entry
 
 	// TODO: [p1-task2] call BIOS to read kernel in SD card
+	li		a7, BIOS_SDREAD					# func label
 
+	lui		a0, %hi(kernel)					# load kernel addr
+	addi	a0, a0, %lo(kernel)
+
+	la		t0, os_size_loc					# load block num
+	lh		a1, 0(t0)
+
+	li		a2, 1							# load start id
+
+	jal		bios_func_entry					# call BIOS to read kernel in SD card
 
 	// TODO: [p1-task4] load task-related arguments and pass them to kernel
 
