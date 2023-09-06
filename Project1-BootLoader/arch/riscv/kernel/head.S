@@ -26,7 +26,7 @@ EOLoop:
 
   /* TODO: [p1-task2] setup C environment */
   la    sp, KERNEL_STACK          # set stack-pointer to KERNEL_STACK
-  jal   main
+  j     main
 
 loop:
   wfi
