@@ -38,6 +38,7 @@ main:
 
 
 	// TODO: [p1-task2] jump to kernel to start UCAS-OS
+	j		kernel
 
 	/************************************************************/
 	/* Do not touch this comment. Reserved for future projects. */
