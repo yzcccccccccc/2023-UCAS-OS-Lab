@@ -132,7 +132,7 @@ static void create_image(int nfiles, char *files[])
         }
         else{
             // [p1-task3] padding to 15 sectors (both kernel and apps)
-            write_padding(img, &new_phyaddr, (15 * fidx + 1) * SECTOR_SIZE);
+            write_padding(img, &phyaddr, (15 * fidx + 1) * SECTOR_SIZE);
         }
 
         fclose(fp);
