@@ -81,7 +81,7 @@ int main(void)
     char ch;
     while (1){
         ch = port_read_ch();
-        if (ch == -1)
+        if ((int)ch == -1)
             continue;
         else
             port_write_ch(ch);
