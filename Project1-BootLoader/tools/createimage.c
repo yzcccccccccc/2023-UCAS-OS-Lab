@@ -148,6 +148,7 @@ static void create_image(int nfiles, char *files[])
 
         /* [p1-task4] updating task_info */
         if (strcmp(*files, "main") && strcmp(*files, "bootblock")){
+            printf("Adding task:\n");
             taskinfo[taskidx].offset = phyaddr;
             taskinfo[taskidx].size = cur_size;
             memcpy(taskinfo[taskidx].task_name, *files, strlen(*files));
