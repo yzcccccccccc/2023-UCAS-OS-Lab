@@ -79,22 +79,47 @@ int main(void)
     // TODO: Load tasks by either task id [p1-task3] or task name [p1-task4],
     //   and then execute them.
 
-    /* [p1-task2] echo! */
-    char ch;
-    while (1){
-        ch = port_read_ch();
-        if (ch == 255)
-            continue;
-        else{
-            if (ch == '\r')
-                bios_putstr("\n\r");
-            else
-                bios_putchar(ch);
+    /* [p1-task2] echo! 
+        char ch;
+        while (1){
+            ch = port_read_ch();
+            if (ch == 255)
+                continue;
+            else{
+                if (ch == '\r')
+                    bios_putstr("\n\r");
+                else
+                    bios_putchar(ch);
+            }
         }
-    }
+    */
 
     /* [p1-task3] load via task id */
-
+        bios_putstr("Input task id:\n\r");
+        int task_id = 0;
+        char ch;
+        while (1){
+            ch = port_read_ch();
+            if (ch == 255)
+                continue;
+            else{
+                if (ch == '\r'){
+                    bios_putstr("\n\r");
+                    break;
+                }
+                else{
+                    bios_putchar(ch);
+                    task_id = task_id * 10 + ch - '0';
+                }
+            }
+        }
+        if (0 <= task_id && task_id <= 9){
+            bios_putstr("Loading task...\n\r");
+            load_task_img(task_id);
+        }
+        else{
+            bios_putstr("Invalid task id! \n\r");
+        }
 
     // Infinite while loop, where CPU stays in a low-power state (QAQQQQQQQQQQQ)
     while (1)
