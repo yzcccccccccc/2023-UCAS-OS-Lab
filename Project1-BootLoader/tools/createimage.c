@@ -100,6 +100,10 @@ static void create_image(int nfiles, char *files[])
         int taskidx = fidx - 2;
         int cur_size = 0;
 
+        /* [p1-task4] record head addr of apps */
+        if (strcmp(*files, "main") && strcmp(*files, "bootblock"))
+            taskinfo[taskidx].offset = phyaddr;
+
         /* open input file */
         fp = fopen(*files, "r");
         assert(fp != NULL);
@@ -150,7 +154,6 @@ static void create_image(int nfiles, char *files[])
         if (strcmp(*files, "main") && strcmp(*files, "bootblock")){
             printf("===========================================================\n");
             printf("* Adding task:\n");
-            taskinfo[taskidx].offset = phyaddr;
             taskinfo[taskidx].size = cur_size;
             memcpy(taskinfo[taskidx].task_name, *files, strlen(*files));
             printf("* task info: %s\n", taskinfo[taskidx].task_name);
