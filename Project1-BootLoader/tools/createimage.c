@@ -81,14 +81,15 @@ int main(int argc, char **argv)
 }
 
 /* TODO: [p1-task4] assign your task_info_t somewhere in 'create_image' */
+
+/* [p1-task4] APP Info bytes and location */
+int app_info_bytes, app_info_offset;
+
 static void create_image(int nfiles, char *files[])
 {
     int tasknum = nfiles - 2;
     int nbytes_kernel = 0;
     int phyaddr = 0;
-
-    /* [p1-task4] APP Info bytes and location */
-    int app_info_bytes, app_info_offset;
 
     FILE *fp = NULL, *img = NULL;
     Elf64_Ehdr ehdr;
@@ -176,10 +177,6 @@ static void create_image(int nfiles, char *files[])
         fclose(fp);
         files++;
     }
-
-    /* [p1-task4] copy taskinfo into image (APP Info) */
-    fseek(img, app_info_offset, SEEK_SET);
-    fwrite(taskinfo, sizeof(task_info_t), tasknum, img);
 
     write_img_info(nbytes_kernel, taskinfo, tasknum, img);
 
@@ -269,9 +266,31 @@ static void write_img_info(int nbytes_kernel, task_info_t *taskinfo,
         fwrite(&os_size, sizeof(short), 1, img);
         printf("writing OS_SIZE: %hd at location %x\n", os_size, OS_SIZE_LOC);
     */
-    
-    /* [p1-task4] */
 
+    /* [p1-task4] copy taskinfo into image (APP Info) */
+        fseek(img, app_info_offset, SEEK_SET);
+        fwrite(taskinfo, sizeof(task_info_t), tasknum, img);
+
+    /* [p1-task4] 
+        write tasknum, os size(including APP Info) and kernel size at the end of bootblock sector 
+        Location Demonstration:
+            ... | tasknum(2 bytes) | os_size(2 bytes) | kernel_size(2 bytes) |(end of bootblock sector)
+    */
+
+        short os_size = NBYTES2SEC(nbytes_kernel + tasknum * sizeof(task_info_t));
+        short kernel_size = (short)nbytes_kernel;
+        
+        // write tasknum
+        fseek(img, OS_SIZE_LOC - 2, SEEK_SET);
+        fwrite(&tasknum, sizeof(short), 1, img);
+
+        // write os_size
+        fwrite(&os_size, sizeof(short), 1, img);
+
+        // write kernel_size
+        fwrite(&kernel_size, sizeof(short), 1, img);
+
+        
 }
 
 /* print an error message and exit */
