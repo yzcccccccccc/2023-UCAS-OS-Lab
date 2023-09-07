@@ -105,7 +105,7 @@ int main(void)
             else{
                 if (ch == '\r'){
                     bios_putstr("\n\r");
-                    if (0 <= task_id && task_id <= 9){
+                    if (0 <= task_id && task_id <= 3){
                         bios_putstr("Loading task...\n\r");
                         unsigned func_addr = load_task_img(task_id);
                         void (*func_pointer)() = func_addr;
