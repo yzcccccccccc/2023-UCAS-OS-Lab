@@ -223,9 +223,11 @@ static void write_img_info(int nbytes_kernel, task_info_t *taskinfo,
 {
     // TODO: [p1-task3] & [p1-task4] write image info to some certain places
     // NOTE: os size, infomation about app-info sector(s) ...
+    
+    /* [p1-task3] */
     short os_size = NBYTES2SEC(nbytes_kernel);
     fseek(img, OS_SIZE_LOC, SEEK_SET);
-    fwrite(&os_size, sizeof(short), OS_SIZE_LOC, img);
+    fwrite(&os_size, sizeof(short), 1, img);
     printf("writing OS_SIZE: %hd at location %x\n", os_size, OS_SIZE_LOC);
 }
 
