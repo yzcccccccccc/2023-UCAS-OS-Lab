@@ -159,6 +159,9 @@ static void create_image(int nfiles, char *files[])
             printf("===========================================================\n");
         }
 
+        if (strcmp(*files, "main") == 0)
+            phyaddr += tasknum * sizeof(task_info_t);
+
         fclose(fp);
         files++;
     }
