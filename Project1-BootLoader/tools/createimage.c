@@ -125,7 +125,7 @@ static void create_image(int nfiles, char *files[])
             }
 
             /* [p1-task4] calculating app size */
-            if (!strcmp(*files, "main") && !strcmp(*files, "bootblock"))
+            if (strcmp(*files, "main") && strcmp(*files, "bootblock"))
                 cur_size += get_filesz(phdr);
         }
 
@@ -147,12 +147,14 @@ static void create_image(int nfiles, char *files[])
         */
 
         /* [p1-task4] updating task_info */
-        taskinfo[taskidx].offset = phyaddr;
-        taskinfo[taskidx].size = cur_size;
-        memcpy(taskinfo[taskidx].task_name, *files, strlen(*files));
-        printf("task info: %s\n", taskinfo[taskidx].task_name);
-        printf("task offset: %d\n", taskinfo[taskidx].offset);
-        printf("task size: %d\n", taskinfo[taskidx].size);
+        if (strcmp(*files, "main") && strcmp(*files, "bootblock")){
+            taskinfo[taskidx].offset = phyaddr;
+            taskinfo[taskidx].size = cur_size;
+            memcpy(taskinfo[taskidx].task_name, *files, strlen(*files));
+            printf("task info: %s\n", taskinfo[taskidx].task_name);
+            printf("task offset: %d\n", taskinfo[taskidx].offset);
+            printf("task size: %d\n", taskinfo[taskidx].size);
+        }
 
         fclose(fp);
         files++;
