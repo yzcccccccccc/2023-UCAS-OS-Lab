@@ -110,11 +110,11 @@ int main(void)
                         unsigned func_addr = load_task_img(task_id);
                         void (*func_pointer)() = func_addr;
                         (*func_pointer)();
-                        task_id = 0;
                     }
                     else{
                         bios_putstr("Invalid task id! \n\r");
                     }
+                    task_id = 0;
                 }
                 else{
                     bios_putchar(ch);
