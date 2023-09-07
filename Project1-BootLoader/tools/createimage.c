@@ -86,6 +86,10 @@ static void create_image(int nfiles, char *files[])
     int tasknum = nfiles - 2;
     int nbytes_kernel = 0;
     int phyaddr = 0;
+
+    /* [p1-task4] APP Info bytes and location */
+    int app_info_bytes, app_info_offset;
+
     FILE *fp = NULL, *img = NULL;
     Elf64_Ehdr ehdr;
     Elf64_Phdr phdr;
@@ -163,7 +167,8 @@ static void create_image(int nfiles, char *files[])
         }
 
         if (strcmp(*files, "main") == 0){
-            int app_info_bytes = tasknum * sizeof(task_info_t);
+            app_info_bytes = tasknum * sizeof(task_info_t);
+            app_info_offset = phyaddr;
             printf("=== APP Info bytes: %d ===\n", app_info_bytes);
             phyaddr += app_info_bytes;
         }
@@ -171,6 +176,11 @@ static void create_image(int nfiles, char *files[])
         fclose(fp);
         files++;
     }
+
+    /* [p1-task4] copy taskinfo into image (APP Info) */
+    fseek(img, app_info_offset, SEEK_SET);
+    fwrite(taskinfo, sizeof(task_info_t), tasknum, img);
+
     write_img_info(nbytes_kernel, taskinfo, tasknum, img);
 
     fclose(img);
