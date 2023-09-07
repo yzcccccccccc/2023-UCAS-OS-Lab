@@ -114,7 +114,6 @@ int main(void)
                     else{
                         bios_putstr("Invalid task id! \n\r");
                     }
-                    break;
                 }
                 else{
                     bios_putchar(ch);
