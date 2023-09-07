@@ -116,7 +116,8 @@ int main(void)
         if (0 <= task_id && task_id <= 9){
             bios_putstr("Loading task...\n\r");
             unsigned func_addr = load_task_img(task_id);
-            (((void)(*)())func_addr)();
+            void (*func_pointer)() = func_addr;
+            (*func_pointer)();
         }
         else{
             bios_putstr("Invalid task id! \n\r");
