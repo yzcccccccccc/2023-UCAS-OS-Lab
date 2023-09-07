@@ -86,7 +86,7 @@ int main(void)
         if (ch == 255)
             continue;
         else{
-            if (ch == '\n')
+            if (ch == '\r')
                 bios_putstr("\n\r");
             else
                 bios_putchar(ch);
