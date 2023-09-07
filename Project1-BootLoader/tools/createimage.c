@@ -17,9 +17,13 @@
 
 #define NBYTES2SEC(nbytes) (((nbytes) / SECTOR_SIZE) + ((nbytes) % SECTOR_SIZE != 0))
 
+#define TASK_NAME_LEN 32
+
 /* TODO: [p1-task4] design your own task_info_t */
 typedef struct {
-
+    char task_name[TASK_NAME_LEN];
+    int offset;                                 // offset from bootblock (addr: 0)
+    int size;
 } task_info_t;
 
 #define TASK_MAXNUM 16
@@ -94,6 +98,7 @@ static void create_image(int nfiles, char *files[])
     for (int fidx = 0; fidx < nfiles; ++fidx) {
 
         int taskidx = fidx - 2;
+        int cur_size = 0;
 
         /* open input file */
         fp = fopen(*files, "r");
@@ -102,8 +107,6 @@ static void create_image(int nfiles, char *files[])
         /* read ELF header */
         read_ehdr(&ehdr, fp);
         printf("0x%04lx: %s\n", ehdr.e_entry, *files);
-
-        printf("start addr: %x\n", phyaddr);
 
         /* for each program header */
         for (int ph = 0; ph < ehdr.e_phnum; ph++) {
@@ -120,6 +123,10 @@ static void create_image(int nfiles, char *files[])
             if (strcmp(*files, "main") == 0) {
                 nbytes_kernel += get_filesz(phdr);
             }
+
+            /* [p1-task4] calculating app size */
+            if (!strcmp(*files, "main") && !strcmp(*files, "bootblock"))
+                cur_size += get_filesz(phdr);
         }
 
         /* write padding bytes */
@@ -132,12 +139,20 @@ static void create_image(int nfiles, char *files[])
         if (strcmp(*files, "bootblock") == 0) {
             write_padding(img, &phyaddr, SECTOR_SIZE);
         }
-        else{
-            // [p1-task3] padding to 15 sectors (both kernel and apps)
-            write_padding(img, &phyaddr, (15 * fidx + 1) * SECTOR_SIZE);
-        }
+        /* [p1-task3] padding.
+            else{
+                // [p1-task3] padding to 15 sectors (both kernel and apps)
+                write_padding(img, &phyaddr, (15 * fidx + 1) * SECTOR_SIZE);
+            }
+        */
 
-        printf("end addr: %x\n", phyaddr);
+        /* [p1-task4] updating task_info */
+        taskinfo[taskidx].offset = phyaddr;
+        taskinfo[taskidx].size = cur_size;
+        memcpy(taskinfo[taskidx].task_name, *files, strlen(*files));
+        printf("task info: %s\n", taskinfo[taskidx].task_name);
+        printf("task offset: %d\n", taskinfo[taskidx].offset);
+        printf("task size: %d\n", taskinfo[taskidx], cur_size);
 
         fclose(fp);
         files++;
@@ -224,11 +239,15 @@ static void write_img_info(int nbytes_kernel, task_info_t *taskinfo,
     // TODO: [p1-task3] & [p1-task4] write image info to some certain places
     // NOTE: os size, infomation about app-info sector(s) ...
     
-    /* [p1-task3] */
-    short os_size = NBYTES2SEC(nbytes_kernel);
-    fseek(img, OS_SIZE_LOC, SEEK_SET);
-    fwrite(&os_size, sizeof(short), 1, img);
-    printf("writing OS_SIZE: %hd at location %x\n", os_size, OS_SIZE_LOC);
+    /* [p1-task3] 
+        short os_size = NBYTES2SEC(nbytes_kernel);
+        fseek(img, OS_SIZE_LOC, SEEK_SET);
+        fwrite(&os_size, sizeof(short), 1, img);
+        printf("writing OS_SIZE: %hd at location %x\n", os_size, OS_SIZE_LOC);
+    */
+    
+    /* [p1-task4] */
+
 }
 
 /* print an error message and exit */
