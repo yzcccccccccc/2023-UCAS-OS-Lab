@@ -294,7 +294,7 @@ static void write_img_info(int nbytes_kernel, task_info_t *taskinfo,
         printf("\ttasknum: %d\n", tasknum);
         printf("\tos_size: %d\n", os_size);
         printf("\tkernel_size: %d\n", kernel_size);
-        printf("====== write img info ======\n");
+        printf("============================\n");
 
         
 }
