@@ -3,19 +3,6 @@
 #include <os/kernel.h>
 #include <type.h>
 
-/* [p1-task4] Personal Tool: print integer */
-void print_int(int val){
-    if (val < 0){
-        bios_putchar('-');
-        val = -val;
-    }
-    while (val){
-        bios_putchar('0' + val % 10);
-        val /= 10;
-    }
-    return;
-}
-
 uint64_t load_task_img(char *taskname)
 {
     /**

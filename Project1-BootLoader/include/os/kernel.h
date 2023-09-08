@@ -43,6 +43,18 @@ static inline int bios_sd_read(unsigned mem_address, unsigned num_of_blocks, \
     return call_jmptab(SD_READ, (long)mem_address, (long)num_of_blocks, \
                         (long)block_id, 0, 0);
 }
+/* [p1-task4] Personal Tool: print integer */
+void print_int(int val){
+    if (val < 0){
+        bios_putchar('-');
+        val = -val;
+    }
+    while (val){
+        bios_putchar('0' + val % 10);
+        val /= 10;
+    }
+    return;
+}
 
 /************************************************************/
 /* Do not touch this comment. Reserved for future projects. */
