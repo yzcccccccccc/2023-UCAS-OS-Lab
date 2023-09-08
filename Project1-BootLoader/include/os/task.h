@@ -19,6 +19,6 @@ typedef struct {
 } task_info_t;
 
 extern task_info_t tasks[TASK_MAXNUM];
-extern int task_num;                            // [p1-task4] global task_num
+extern short task_num;                            // [p1-task4] global task_num
 
 #endif
