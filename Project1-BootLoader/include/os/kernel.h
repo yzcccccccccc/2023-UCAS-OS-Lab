@@ -45,7 +45,7 @@ static inline int bios_sd_read(unsigned mem_address, unsigned num_of_blocks, \
 }
 
 /* [p1-task4] Personal Tool: print integer */
-void print_int(int val){
+void my_print_int(int val){
     if (val < 0){
         bios_putchar('-');
         val = -val;

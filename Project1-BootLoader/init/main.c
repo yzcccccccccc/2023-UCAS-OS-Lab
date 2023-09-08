@@ -51,11 +51,11 @@ static void init_task_info(void)
     kernel_size = *(info_ptr + 4);
 
     bios_putstr("Task Num: ");
-    print_int((int)task_num);
+    my_print_int((int)task_num);
     bios_putstr("\n\r");
 
     bios_putstr("Kernel Size: ");
-    print_int((int)kernel_size);
+    my_print_int((int)kernel_size);
     bios_putstr("\n\r");
 
     // loading APP Info to taskinfo[]
