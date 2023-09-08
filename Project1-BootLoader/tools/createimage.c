@@ -271,7 +271,7 @@ static void write_img_info(int nbytes_kernel, task_info_t *taskinfo,
 
     /* [p1-task4] copy taskinfo into image (APP Info) */
         fseek(img, app_info_offset, SEEK_SET);
-        printf("%d\n", fwrite(taskinfo, sizeof(task_info_t), tasknum, img));
+        printf("Write %d task_info_t at %x\n", fwrite(taskinfo, sizeof(task_info_t), tasknum, img), app_info_offset);
 
     /* [p1-task4] 
         write tasknum, os size(including APP Info) and kernel size at the end of bootblock sector 
