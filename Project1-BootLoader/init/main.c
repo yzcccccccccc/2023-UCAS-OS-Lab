@@ -15,7 +15,7 @@ char buf[VERSION_BUF];
 task_info_t tasks[TASK_MAXNUM];
 
 // [p1-task4] task num
-short task_num, kernel_size, os_size;
+short task_num, app_info_offset, os_size;
 
 static int bss_check(void)
 {
