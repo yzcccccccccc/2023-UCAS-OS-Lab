@@ -45,9 +45,12 @@ static void my_print_int(int val){
         bios_putchar('-');
         val = -val;
     }
-    while (val){
-        bios_putchar('0' + val % 10);
-        val /= 10;
+    if (val < 10){
+        bios_putchar('0' + val);
+        return;
+    }else{
+        my_print_int(val / 10);
+        bios_putchar(val % 10 + '0');
     }
     return;
 }
