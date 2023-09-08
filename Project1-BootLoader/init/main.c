@@ -82,7 +82,7 @@ static void init_task_info(void)
 
     // loading APP Info to taskinfo[]
     task_info_t *task_info_ptr;
-    task_info_ptr = (task_info_t *)(0x50200200 + kernel_size);
+    task_info_ptr = (task_info_t *)(0x50201000 + kernel_size);
     memcpy((uint8_t *)tasks, (uint8_t *)task_info_ptr, task_num * sizeof(task_info_t));
 }
 
