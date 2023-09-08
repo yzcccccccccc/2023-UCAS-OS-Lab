@@ -39,6 +39,9 @@ uint64_t load_task_img(char *taskname)
 
         check_mark = 0;
         for (int i = 0; i < task_num; i++){
+            bios_putstr("Task Checking Now: ");
+            bios_putstr(tasks[i].task_name);
+            bios_putstr("\n\r");
             if (strcmp(taskname, tasks[i].task_name) == 0){
                 check_mark = 1;
                 bios_putstr("Task check-in:");
