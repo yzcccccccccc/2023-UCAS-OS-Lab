@@ -32,7 +32,7 @@ uint64_t load_task_img(char *taskname)
     */
 
     /* [p1-task4] load via task name */
-        bios_putstr("Loading via taskname... \n\r");
+        bios_putstr("=================================================\n\r");
         int task_size, task_offset, check_mark;
         int st_sec_id, occ_sec_num;                 // start sector id and occupied sectors
         unsigned task_addr;
@@ -63,6 +63,8 @@ uint64_t load_task_img(char *taskname)
                 }
                 
                 bios_putstr("Loading Task Complete.\n\r");
+                bios_putstr("=================================================\n\r");
             }
         }
+        return task_addr;
 }
