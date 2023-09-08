@@ -187,6 +187,7 @@ int main(void)
                 if (ch == '\r'){
                     bios_putstr("\n\r");
                     task_name_buf[name_idx] = '\0';
+                    bios_putstr("========================================\n\r");
                     bios_putstr("Loading Task via name[");
                     bios_putstr(task_name_buf);
                     bios_putstr("]\n\r");
@@ -200,6 +201,8 @@ int main(void)
                         bios_putstr("Unknown Task!\n\r");
                     }
                     name_idx = 0;
+                    bios_putstr("========================================\n\r");
+                    bios_putstr("Input task name: \n\r");
                 }
                 else{
                     bios_putchar(ch);
