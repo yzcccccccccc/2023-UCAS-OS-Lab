@@ -35,7 +35,7 @@ uint64_t load_task_img(char *taskname)
                 task_size = tasks[i].size;
                 task_offset = tasks[i].offset;
                 st_sec_id = task_offset / SECTOR_SIZE;
-                occ_sec_num = NBYTES2SEC(task_offset + task_size) - st_sec_id + 1;
+                occ_sec_num = NBYTES2SEC(task_offset + task_size) - st_sec_id;
                 task_addr = TASK_MEM_BASE + i * TASK_SIZE;
 
                 bios_sd_read(task_addr, occ_sec_num, st_sec_id);        // rough transporting!
