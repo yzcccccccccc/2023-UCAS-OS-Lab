@@ -14,6 +14,10 @@ char buf[VERSION_BUF];
 // Task info array
 task_info_t tasks[TASK_MAXNUM];
 
+// [p1-task4] task num
+short task_num;
+short kernel_size;
+
 static int bss_check(void)
 {
     for (int i = 0; i < VERSION_BUF; ++i)
@@ -40,6 +44,16 @@ static void init_task_info(void)
 {
     // TODO: [p1-task4] Init 'tasks' array via reading app-info sector
     // NOTE: You need to get some related arguments from bootblock first
+    short *info_ptr = 0x502001fa;
+
+    // loading task num and kernel size
+    task_num = *(info_ptr);
+    kernel_size = *(info_ptr + 4);
+
+    // loading APP Info to taskinfo[]
+    task_info_t *task_info_ptr;
+    task_info_ptr = (0x50200200 + kernel_size);
+    memcpy(taskinfo, task_info_ptr, tasknum * sizeof(task_info_t));
 }
 
 /************************************************************/
@@ -94,7 +108,7 @@ int main(void)
         }
     */
 
-    /* [p1-task3] load via task id */
+    /* [p1-task3] load via task id 
         bios_putstr("Input task id:\n\r");
         int task_id = 0;
         char ch;
@@ -122,7 +136,42 @@ int main(void)
                 }
             }
         }
+    */
 
+    /* [p1-task4] load vias task name */
+        bios_putstr("Input task name: \n\r");
+        char ch;
+        char task_name_buf[TASK_NAME_LEN];
+        int name_idx = 0;
+        while (1){
+            ch = port_read_ch();
+            if (ch == 255)
+                continue;
+            else{
+                if (ch == '\r'){
+                    bios_putstr("\n\r");
+                    task_name_buf[i] = '\0';
+                    bios_putstr("Loading Task via name[");
+                    bios_putstr(task_name_buf);
+                    bios_putstr("]\n\r");
+
+                    unsigned func_addr = load_task_img(task_name_buf);
+                    if (func_addr != -1){
+                       void (*func_pointer)() = func_addr;
+                        (*func_pointer)(); 
+                    }
+                    else{
+                        bios_putstr("Unknown Task!\n\r");
+                    }
+                    name_idx = 0;
+                }
+                else{
+                    bios_putchar(ch);
+                    task_name_buf[name_idx] = ch;
+                    name_idx++;
+                }
+            }
+        }
     // Infinite while loop, where CPU stays in a low-power state (QAQQQQQQQQQQQ)
     while (1)
     {
