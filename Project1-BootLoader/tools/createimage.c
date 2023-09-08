@@ -161,7 +161,7 @@ static void create_image(int nfiles, char *files[])
             printf("* Adding task:\n");
             taskinfo[taskidx].size = cur_size;
             memcpy(taskinfo[taskidx].task_name, *files, strlen(*files));
-            printf("* task info: %s\n", taskinfo[taskidx].task_name);
+            printf("* task name: %s\n", taskinfo[taskidx].task_name);
             printf("* task offset: %d\n", taskinfo[taskidx].offset);
             printf("* task size: %d\n", taskinfo[taskidx].size);
             printf("===========================================================\n");
