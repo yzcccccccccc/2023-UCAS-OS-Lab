@@ -44,7 +44,7 @@ static void init_task_info(void)
 {
     // TODO: [p1-task4] Init 'tasks' array via reading app-info sector
     // NOTE: You need to get some related arguments from bootblock first
-    short *info_ptr = 0x502001fa;
+    short *info_ptr = (short *)0x502001fa;
 
     // loading task num and kernel size
     task_num = *(info_ptr);
@@ -52,8 +52,8 @@ static void init_task_info(void)
 
     // loading APP Info to taskinfo[]
     task_info_t *task_info_ptr;
-    task_info_ptr = (0x50200200 + kernel_size);
-    memcpy(taskinfo, task_info_ptr, tasknum * sizeof(task_info_t));
+    task_info_ptr = (task_info_t *)(0x50200200 + kernel_size);
+    memcpy(tasks, task_info_ptr, tasknum * sizeof(task_info_t));
 }
 
 /************************************************************/

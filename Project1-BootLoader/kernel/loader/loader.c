@@ -39,14 +39,14 @@ uint64_t load_task_img(char *taskname)
 
         check_mark = 0;
         for (int i = 0; i < task_num; i++){
-            if (strcmp(taskname, taskinfo[i].task_name) == 0){
+            if (strcmp(taskname, tasks[i].task_name) == 0){
                 check_mark = 1;
                 bios_putstr("Task check-in:");
                 bios_putstr(taskname);
                 bios_putstr(", transporting to memory ...\n\r");
 
-                task_size = taskinfo[i].size;
-                task_offset = taskinfo[i].offset;
+                task_size = tasks[i].size;
+                task_offset = tasks[i].offset;
                 st_sec_id = task_offset / SECTOR_SIZE;
                 occ_sec_num = NBYTES2SEC(task_size);
                 task_addr = TASK_MEM_BASE + i * TASK_SIZE;
