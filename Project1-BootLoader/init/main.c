@@ -40,6 +40,19 @@ static void init_jmptab(void)
     jmptab[SD_READ]         = (long (*)())sd_read;
 }
 
+/* [p1-task4] Personal Tool: print integer */
+static void my_print_int(int val){
+    if (val < 0){
+        bios_putchar('-');
+        val = -val;
+    }
+    while (val){
+        bios_putchar('0' + val % 10);
+        val /= 10;
+    }
+    return;
+}
+
 static void init_task_info(void)
 {
     // TODO: [p1-task4] Init 'tasks' array via reading app-info sector
