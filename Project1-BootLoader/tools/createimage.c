@@ -292,7 +292,7 @@ static void write_img_info(int nbytes_kernel, task_info_t *taskinfo,
         printf("====== write img info ======\n");
         printf("\ttasknum: %d\n", tasknum);
         printf("\tos_size: %d\n", os_size);
-        printf("\tkernel_size: %d\n", kernel_size);
+        printf("\tapp_info_offset: %d\n", app_info_offset);
         printf("============================\n");
 
     /* [p1-task4] copy taskinfo into image (APP Info) */
