@@ -269,13 +269,6 @@ static void write_img_info(int nbytes_kernel, task_info_t *taskinfo,
         printf("writing OS_SIZE: %hd at location %x\n", os_size, OS_SIZE_LOC);
     */
 
-    /* [p1-task4] copy taskinfo into image (APP Info) */
-        fseek(img, app_info_offset, SEEK_SET);
-        fwrite(taskinfo, sizeof(task_info_t), tasknum, img);
-        FILE *test = fopen("./test.txt", "w");
-        fseek(test, 0, SEEK_SET);
-        fwrite(taskinfo, sizeof(task_info_t), tasknum, test);
-        fclose(test);
 
     /* [p1-task4] 
         write tasknum, os size(including APP Info) and kernel size at the end of bootblock sector 
@@ -302,7 +295,9 @@ static void write_img_info(int nbytes_kernel, task_info_t *taskinfo,
         printf("\tkernel_size: %d\n", kernel_size);
         printf("============================\n");
 
-        
+    /* [p1-task4] copy taskinfo into image (APP Info) */
+        fseek(img, app_info_offset, SEEK_SET);
+        fwrite(taskinfo, sizeof(task_info_t), tasknum, img);
 }
 
 /* print an error message and exit */
