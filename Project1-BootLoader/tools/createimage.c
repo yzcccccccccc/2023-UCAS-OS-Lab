@@ -271,13 +271,13 @@ static void write_img_info(int nbytes_kernel, task_info_t *taskinfo,
 
 
     /* [p1-task4] 
-        write tasknum, os size(including APP Info) and kernel size at the end of bootblock sector 
+        write tasknum, os size and APP-Info offset at the end of bootblock sector 
         Location Demonstration:
-            ... | tasknum(2 bytes) | os_size(2 bytes) | kernel_size(2 bytes) |(end of bootblock sector)
+            ... | tasknum(2 bytes) | os_size(2 bytes) | app_info_offset(2 bytes) |(end of bootblock sector)
     */
 
-        short os_size = NBYTES2SEC(nbytes_kernel + tasknum * sizeof(task_info_t));
-        short kernel_size = (short)nbytes_kernel;
+        short os_size = NBYTES2SEC(nbytes_kernel);
+        short w_app_info_offset = (short)app_info_offset;
         
         // write tasknum
         fseek(img, OS_SIZE_LOC - 2, SEEK_SET);
@@ -286,8 +286,8 @@ static void write_img_info(int nbytes_kernel, task_info_t *taskinfo,
         // write os_size
         fwrite(&os_size, sizeof(short), 1, img);
 
-        // write kernel_size
-        fwrite(&kernel_size, sizeof(short), 1, img);
+        // write app_info_offset
+        fwrite(&w_app_info_offset, sizeof(short), 1, img);
 
         printf("====== write img info ======\n");
         printf("\ttasknum: %d\n", tasknum);
