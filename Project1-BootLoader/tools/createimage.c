@@ -170,7 +170,8 @@ static void create_image(int nfiles, char *files[])
         if (strcmp(*files, "main") == 0){
             app_info_bytes = tasknum * sizeof(task_info_t);
             app_info_offset = phyaddr;
-            printf("=== APP Info bytes: %d ===\n", app_info_bytes);
+            printf("****************** APP Info bytes: %d \n", app_info_bytes);
+            printf("****************** APP Info offset: %d\n", app_info_offset);
             phyaddr += app_info_bytes;
         }
 
