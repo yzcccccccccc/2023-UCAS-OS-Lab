@@ -164,6 +164,7 @@ static void create_image(int nfiles, char *files[])
             printf("* task name: %s\n", taskinfo[taskidx].task_name);
             printf("* task offset: %d\n", taskinfo[taskidx].offset);
             printf("* task size: %d\n", taskinfo[taskidx].size);
+            printf("* task id: %d\n", taskidx);
             printf("===========================================================\n");
         }
 
