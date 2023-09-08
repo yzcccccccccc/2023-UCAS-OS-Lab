@@ -26,14 +26,11 @@ uint64_t load_task_img(char *taskname)
 
         check_mark = 0;
         for (int i = 0; i < task_num; i++){
-            bios_putstr("Task Checking Now: ");
-            bios_putstr(tasks[i].task_name);
-            bios_putstr("\n\r");
             if (strcmp(taskname, tasks[i].task_name) == 0){
                 check_mark = 1;
-                bios_putstr("Task check-in:");
+                bios_putstr("Task check-in: [");
                 bios_putstr(taskname);
-                bios_putstr(", transporting to memory ...\n\r");
+                bios_putstr("], transporting to memory ...\n\r");
 
                 task_size = tasks[i].size;
                 task_offset = tasks[i].offset;
@@ -54,6 +51,7 @@ uint64_t load_task_img(char *taskname)
                 
                 bios_putstr("Loading Task Complete.\n\r");
                 bios_putstr("=================================================\n\r");
+                break;
             }
         }
         return task_addr;
