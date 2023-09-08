@@ -186,7 +186,7 @@ int main(void)
             else{
                 if (ch == '\r'){
                     bios_putstr("\n\r");
-                    task_name_buf[namd_idx] = '\0';
+                    task_name_buf[name_idx] = '\0';
                     bios_putstr("Loading Task via name[");
                     bios_putstr(task_name_buf);
                     bios_putstr("]\n\r");
