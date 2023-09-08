@@ -173,7 +173,7 @@ static void create_image(int nfiles, char *files[])
             app_info_offset = phyaddr;
             printf("****************** APP Info bytes: %d \n", app_info_bytes);
             printf("****************** APP Info offset: %d\n", app_info_offset);
-            phyaddr += app_info_bytes;
+            write_padding(img, &phyaddr, phyaddr + app_infobytes);
         }
 
         fclose(fp);
