@@ -85,7 +85,7 @@ static void init_task_info(void)
     task_info_t *task_info_ptr;
     int task_info_size = task_num * sizeof(task_info_t);
     int task_info_sec_id = app_info_offset / SECTOR_SIZE;
-    int task_info_sec_num = task_info_size / SECTOR_SIZE + 1;
+    int task_info_sec_num = NBYTES2SEC(app_info_offset + task_info_size) - task_info_sec_id;
     bios_sd_read(tmp_app_info_addr, task_info_sec_num, task_info_sec_id);
 
     task_info_ptr = (task_info_t *)(tmp_app_info_addr + app_info_offset - SECTOR_SIZE * task_info_sec_id);
