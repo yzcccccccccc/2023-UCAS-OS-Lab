@@ -15,8 +15,7 @@ char buf[VERSION_BUF];
 task_info_t tasks[TASK_MAXNUM];
 
 // [p1-task4] task num
-short task_num;
-short kernel_size;
+short task_num, kernel_size, os_size;
 
 static int bss_check(void)
 {
@@ -61,16 +60,21 @@ static void init_task_info(void)
 
     // loading task num and kernel size
     task_num = *(info_ptr);
-    kernel_size = *(info_ptr + 4);
+    os_size = *(info_ptr + 1);
+    kernel_size = *(info_ptr + 2);
 
     bios_putstr("=======================================\n\r");
     bios_putstr("Task Num: ");
     my_print_int((int)task_num);
-    bios_putstr("\n\r");
+    bios_putstr("\n\r\n\r");
+
+    bios_putstr("OS Size: ");
+    my_print_int((int)os_size);
+    bios_putstr("\n\r\n\r");
 
     bios_putstr("Kernel Size: ");
     my_print_int((int)kernel_size);
-    bios_putstr("\n\r");
+    bios_putstr("\n\r\n\r");
     bios_putstr("=======================================\n\r");
 
     // loading APP Info to taskinfo[]
