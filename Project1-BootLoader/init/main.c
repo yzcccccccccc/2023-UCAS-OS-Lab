@@ -202,7 +202,7 @@ int main(void)
                     }
                     name_idx = 0;
                     bios_putstr("========================================\n\r");
-                    bios_putstr("Input task name: \n\r");
+                    bios_putstr("\n\rInput task name: \n\r");
                 }
                 else{
                     bios_putchar(ch);
