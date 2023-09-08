@@ -60,11 +60,12 @@ static void init_task_info(void)
     // TODO: [p1-task4] Init 'tasks' array via reading app-info sector
     // NOTE: You need to get some related arguments from bootblock first
     short *info_ptr = (short *)0x502001fa;
+    unsigned tmp_app_info_addr = 0x52000000;
 
     // loading task num and kernel size
     task_num = *(info_ptr);
     os_size = *(info_ptr + 1);
-    kernel_size = *(info_ptr + 2);
+    app_info_offset = *(info_ptr + 2);
 
     bios_putstr("=======================================\n\r");
     bios_putstr("\tTask Num: ");
@@ -75,14 +76,19 @@ static void init_task_info(void)
     my_print_int((int)os_size);
     bios_putstr(" sectors\n\r\n\r");
 
-    bios_putstr("\tKernel Size: ");
-    my_print_int((int)kernel_size);
+    bios_putstr("\tAPP-Info Offset: ");
+    my_print_int((int)app_info_offset);
     bios_putstr(" bytes\n\r");
     bios_putstr("=======================================\n\r");
 
     // loading APP Info to taskinfo[]
     task_info_t *task_info_ptr;
-    task_info_ptr = (task_info_t *)(0x50201000 + kernel_size);
+    int task_info_size = task_num * sizeof(task_info_t);
+    int task_info_sec_id = app_info_offset / SECTOR_SIZE;
+    int task_info_sec_num = task_info_size / SECTOR_SIZE + 1;
+    bios_sd_read(tmp_app_info_addr, task_info_sec_num, task_info_sec_id);
+
+    task_info_ptr = (task_info_t *)(tmp_app_info_addr + app_info_offset - SECTOR_SIZE * task_info_sec_id);
     memcpy((uint8_t *)tasks, (uint8_t *)task_info_ptr, task_num * sizeof(task_info_t));
 }
 
