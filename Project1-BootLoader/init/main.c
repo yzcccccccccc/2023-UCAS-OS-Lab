@@ -156,7 +156,7 @@ int main(void)
                     bios_putstr("]\n\r");
 
                     unsigned func_addr = load_task_img(task_name_buf);
-                    if (func_addr != -1){
+                    if (func_addr != 0){
                        void (*func_pointer)() = func_addr;
                         (*func_pointer)(); 
                     }
