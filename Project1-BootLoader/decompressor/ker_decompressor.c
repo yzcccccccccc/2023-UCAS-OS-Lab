@@ -15,7 +15,7 @@
 
 #define MAX_AVAIL_BYTES     8192
 
-void self_decompress(){
+int main(){
     char *tmp_ptr = (char *)TEMP_LOC;
     char *rst_ptr = (char *)RESTORE_LOC;
 
@@ -31,5 +31,5 @@ void self_decompress(){
             asm volatile("wfi");
         }
     }
-    return;
+    return 0;
 }

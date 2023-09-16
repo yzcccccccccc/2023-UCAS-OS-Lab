@@ -7,7 +7,7 @@
 #include <string.h>
 
 #include "tinylibdeflate.h"
-#define BUFFER_SIZE 8192
+#define BUFFER_SIZE 100000
 
 #define IMAGE_FILE "./image"
 #define ARGS "[--extended] [--vm] <bootblock> <executable-file> ..."
@@ -157,26 +157,14 @@ static void create_image(int nfiles, char *files[])
                 cur_size += get_filesz(phdr); */
         }
 
-        /* write padding bytes */
-        /**
-         * TODO:
-         * 1. [p1-task3] do padding so that the kernel and every app program
-         *  occupies the same number of sectors
-         * 2. [p1-task4] only padding bootblock is allowed!
-         */
-        if (strcmp(*files, "bootblock") == 0) {
-            write_padding(img, &phyaddr, SECTOR_SIZE);
-        }
-
         /*  [p1-task4] updating task_info 
             [p1-task5] producing img
         */
             int out_nbytes = deflate_deflate_compress(compressor, raw_data, cur_compr, crp_data, BUFFER_SIZE);
-            cur_size = out_nbytes;
-            if (strcmp(*files, "bootblock") == 0)
-                cur_size = SECTOR_SIZE;
-            if (strcmp(*files, "ker_decompressor") == 0)
+            if (strcmp(*files, "ker_decompressor") == 0 || strcmp(*files, "bootblock") == 0)
                 cur_size = cur_compr;
+            else
+                cur_size = out_nbytes;
             if (strcmp(*files, "ker_decompressor") && strcmp(*files, "bootblock")){
                 /* [p1-task5] write to img */
                 for (int i = 0; i < out_nbytes; i++)
@@ -207,17 +195,28 @@ static void create_image(int nfiles, char *files[])
                 /* [p1-task5] write to img */
                 for (int i = 0; i < cur_compr; i++)
                     fputc(raw_data[i], img);
-                phyaddr += cur_compr;
             }
+            phyaddr += cur_size;
 
             if (strcmp(*files, "main") == 0){
                 app_info_bytes = tasknum * sizeof(task_info_t);
                 app_info_offset = phyaddr;
-                printf("* APP Info bytes: %d \n", app_info_bytes);
-                printf("* APP Info offset: %d\n", app_info_offset);
+                printf("\n* APP Info bytes: %d \n", app_info_bytes);
+                printf("* APP Info offset: %d\n\n", app_info_offset);
                 write_padding(img, &phyaddr, phyaddr + app_info_bytes);
             }
 
+        /* write padding bytes */
+        /**
+         * TODO:
+         * 1. [p1-task3] do padding so that the kernel and every app program
+         *  occupies the same number of sectors
+         * 2. [p1-task4] only padding bootblock is allowed!
+         */
+        if (strcmp(*files, "bootblock") == 0) {
+            write_padding(img, &phyaddr, SECTOR_SIZE);
+        }
+        
         fclose(fp);
         files++;
     }

@@ -43,8 +43,11 @@ KERNEL_CFLAGS   = $(CFLAGS) $(KERNEL_INCLUDE) -Wl,--defsym=TEXT_START=$(KERNEL_E
 USER_INCLUDE    = -I$(DIR_TINYLIBC)/include
 USER_CFLAGS     = $(CFLAGS) $(USER_INCLUDE)
 
+DECOMP_INCLUDE	= -I$(DIR_DEFLIB) -I$(DIR_DEFLATE) -I$(DIR_ARCH)/include -Iinclude
+DECOMP_CFLAGS	= -O2 $(CFLAGS) $(DECOMP_INCLUDE) -Wall -DFREESTANDING -ggdb -Wl,--defsym=TEXT_START=$(DECOMP_ENTRYPOINT) -T riscv.lds
+
 CREATEIMAGE_INCLUDE = -I$(DIR_DEFLIB) -I$(DIR_DEFLATE)
-CREATEIMAGE_CFLAGS	= -O2 $(CREATEIMAGE_INCLUDE) -Wall -DFREESTANDING -ggdb -Wall
+CREATEIMAGE_CFLAGS	= -O2 $(CREATEIMAGE_INCLUDE) -Wall -DFREESTANDING -ggdb
 
 QEMU_OPTS       = -nographic -machine virt -m 256M -kernel $(UBOOT) -bios none \
                      -drive if=none,format=raw,id=image,file=${ELF_IMAGE} \
@@ -71,6 +74,7 @@ DIR_DECMP		= ./decompressor
 BOOTLOADER_ENTRYPOINT   = 0x50200000
 KERNEL_ENTRYPOINT       = 0x50201000
 USER_ENTRYPOINT         = 0x52000000
+DECOMP_ENTRYPOINT		= 0x53000000
 
 # -----------------------------------------------------------------------
 # UCAS-OS Kernel Source Files
@@ -85,9 +89,13 @@ SRC_LIBS    = $(wildcard $(DIR_LIBS)/*.c)
 
 SRC_MAIN    = $(SRC_ARCH) $(SRC_INIT) $(SRC_BIOS) $(SRC_KERNEL) $(SRC_LIBS)
 
+SRC_DEF		= $(wildcard $(DIR_DEFLATE)/*.c) $(wildcard $(DIR_DEFLIB)/*.c)
+SRC_DECMP	= $(SRC_ARCH) $(DIR_DECMP)/ker_decompressor.c  $(SRC_DEF) $(SRC_LIBS) $(SRC_BIOS)
+
 ELF_BOOT    = $(DIR_BUILD)/bootblock
 ELF_MAIN    = $(DIR_BUILD)/main
 ELF_IMAGE   = $(DIR_BUILD)/image
+ELF_DECMP	= $(DIR_BUILD)/ker_decompressor
 
 # -----------------------------------------------------------------------
 # UCAS-OS User Source Files
@@ -124,7 +132,7 @@ floppy:
 	sudo fdisk -l $(DISK)
 	sudo dd if=$(DIR_BUILD)/image of=$(DISK)2 conv=notrunc
 
-asm: $(ELF_BOOT) $(ELF_MAIN) $(ELF_USER)
+asm: $(ELF_BOOT) $(ELF_MAIN) $(ELF_USER) $(ELF_DECMP)
 	for elffile in $^; do $(OBJDUMP) -d $$elffile > $(notdir $$elffile).txt; done
 
 gdb:
@@ -151,6 +159,9 @@ $(ELF_BOOT): $(SRC_BOOT) riscv.lds
 $(ELF_MAIN): $(SRC_MAIN) riscv.lds
 	$(CC) $(KERNEL_CFLAGS) -o $@ $(SRC_MAIN)
 
+$(ELF_DECMP): $(SRC_DECMP) riscv.lds
+	$(CC) $(DECOMP_CFLAGS) -o $@ $(SRC_DECMP)
+
 $(OBJ_CRT0): $(SRC_CRT0)
 	$(CC) $(USER_CFLAGS) -I$(DIR_ARCH)/include -c $< -o $@
 
@@ -158,7 +169,7 @@ $(DIR_BUILD)/%: $(DIR_TEST_PROJ)/%.c $(OBJ_CRT0) riscv.lds
 	$(CC) $(USER_CFLAGS) -o $@ $(OBJ_CRT0) $< -Wl,--defsym=TEXT_START=$(USER_ENTRYPOINT) -T riscv.lds
 	$(eval USER_ENTRYPOINT := $(shell python3 -c "print(hex(int('$(USER_ENTRYPOINT)', 16) + int('0x10000', 16)))"))
 
-elf: $(ELF_BOOT) $(ELF_MAIN) $(ELF_USER)
+elf: $(ELF_BOOT) $(ELF_MAIN) $(ELF_USER) $(ELF_DECMP)
 
 .PHONY: elf
 
@@ -169,7 +180,7 @@ elf: $(ELF_BOOT) $(ELF_MAIN) $(ELF_USER)
 $(ELF_CREATEIMAGE): $(SRC_CREATEIMAGE) $(SRC_DEFCOMMON) $(SRC_DEFLIB)
 	$(HOST_CC) $(SRC_CREATEIMAGE) $(SRC_DEFCOMMON) $(SRC_DEFLIB) $(CREATEIMAGE_CFLAGS) -o $@
 
-image: $(ELF_CREATEIMAGE) $(ELF_BOOT) $(ELF_MAIN) $(ELF_USER)
+image: $(ELF_CREATEIMAGE) $(ELF_BOOT) $(ELF_DECMP) $(ELF_MAIN) $(ELF_USER)
 	cd $(DIR_BUILD) && ./$(<F) --extended $(filter-out $(<F), $(^F))
 
 .PHONY: image
