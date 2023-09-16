@@ -121,11 +121,12 @@ static void create_image(int nfiles, char *files[])
         cur_compr = 0;
 
         /* [p1-task4] & [p1-task5] record head addr of apps */
-        if (strcmp(*files, "ker_decompressor") && strcmp(*files, "bootblock"))
+        if (strcmp(*files, "ker_decompressor") && strcmp(*files, "bootblock")){
             if (strcmp(*files, "main"))
                 taskinfo[taskidx].offset = phyaddr;
             else
                 main_offset = phyaddr;
+        }
 
         /* open input file */
         fp = fopen(*files, "r");
