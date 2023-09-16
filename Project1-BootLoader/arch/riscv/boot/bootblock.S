@@ -24,33 +24,14 @@ main:
 	la		a0, msg
 	jal		bios_func_entry
 
-/*
-	// TODO: [p1-task2] call BIOS to read kernel in SD card
-	li		a7, BIOS_SDREAD					# func label
 
-	lui		a0, %hi(kernel)					# load kernel addr
-	addi	a0, a0, %lo(kernel)
-
-	la		t0, os_size_loc					# load block num
-	lh		a1, 0(t0)
-
-	li		a2, 1							# load start id
-
-	jal		bios_func_entry					# call BIOS to read kernel in SD card
-
-	// TODO: [p1-task4] load task-related arguments and pass them to kernel
-
-
-	// TODO: [p1-task2] jump to kernel to start UCAS-OS
-	j		kernel
-*/
 	// [p1-task5] call BIOS to load ker_decompressor
 	li		a7, BIOS_SDREAD
 
 	la		a0, ker_decmp_entry
 
 	la		t0, os_size_loc
-	lh		a1, -8(t0)
+	lh		a1, -6(t0)
 
 	li		a2, 1
 

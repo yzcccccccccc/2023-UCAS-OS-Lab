@@ -151,10 +151,6 @@ static void create_image(int nfiles, char *files[])
             if (strcmp(*files, "main") == 0) {
                 nbytes_kernel += get_filesz(phdr);
             }*/
-
-            /* [p1-task4] calculating app size 
-            if (strcmp(*files, "main") && strcmp(*files, "bootblock"))
-                cur_size += get_filesz(phdr); */
         }
 
         /*  [p1-task4] updating task_info 
@@ -206,7 +202,7 @@ static void create_image(int nfiles, char *files[])
                 write_padding(img, &phyaddr, phyaddr + app_info_bytes);
             }
 
-            if (strcmp(*files, "ker_decompressor"))
+            if (strcmp(*files, "ker_decompressor") == 0)
                 decmp_bytes = cur_size;
         /* write padding bytes */
         /**
@@ -320,8 +316,8 @@ static void write_img_info(int nbytes_kernel, task_info_t *taskinfo,
         short w_app_info_offset = (short)app_info_offset;
         short w_decmp_size = NBYTES2SEC(decmp_bytes);
         
-        // write decmp_bytes
-        fseek(img, OS_SIZE_LOC - 8, SEEK_SET);
+        // write decmp_size
+        fseek(img, OS_SIZE_LOC - 6, SEEK_SET);
         fwrite(&w_decmp_size, sizeof(short), 1, img);
 
         // write os_size(bytes)
@@ -336,12 +332,12 @@ static void write_img_info(int nbytes_kernel, task_info_t *taskinfo,
         // write app_info_offset
         fwrite(&w_app_info_offset, sizeof(short), 1, img);
 
-        printf("============ write img info ============\n");
+        printf("================== write img info ==================\n");
         printf("\ttasknum: %d\n", tasknum);
         printf("\tos_size: %d bytes, %d sectors\n", os_size_b, os_size);
         printf("\tapp_info_offset: %d\n", app_info_offset);
-        printf("\tdecompressor size: %d\n", decmp_bytes);
-        printf("========================================\n");
+        printf("\tdecompressor size: %d bytes, %d sectors\n", decmp_bytes, w_decmp_size);
+        printf("====================================================\n");
 
     /* [p1-task4] copy taskinfo into image (APP Info) */
         fseek(img, app_info_offset, SEEK_SET);
