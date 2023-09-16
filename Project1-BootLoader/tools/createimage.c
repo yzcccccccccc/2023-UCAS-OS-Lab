@@ -182,7 +182,7 @@ static void create_image(int nfiles, char *files[])
                 for (int i = 0; i < out_nbytes; i++)
                     fputc(crp_data[i], img);
 
-                if (strcmp(*files, "main")){
+                if (strcmp(*files, "main") == 0){
                     main_bytes = out_nbytes;
                     printf("===========================================================\n");
                     printf("* Adding MAIN:\n");
