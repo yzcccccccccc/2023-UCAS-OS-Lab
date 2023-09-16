@@ -43,6 +43,9 @@ KERNEL_CFLAGS   = $(CFLAGS) $(KERNEL_INCLUDE) -Wl,--defsym=TEXT_START=$(KERNEL_E
 USER_INCLUDE    = -I$(DIR_TINYLIBC)/include
 USER_CFLAGS     = $(CFLAGS) $(USER_INCLUDE)
 
+CREATEIMAGE_INCLUDE = -I$(DIR_DEFLIB) -I$(DIR_DEFLATE)
+CREATEIMAGE_CFLAGS	= -O2 $(CREATEIMAGE_INCLUDE) -Wall -DFREESTANDING -ggdb -Wall
+
 QEMU_OPTS       = -nographic -machine virt -m 256M -kernel $(UBOOT) -bios none \
                      -drive if=none,format=raw,id=image,file=${ELF_IMAGE} \
                      -device virtio-blk-device,drive=image \
@@ -61,6 +64,9 @@ DIR_LIBS        = ./libs
 DIR_TINYLIBC    = ./tiny_libc
 DIR_TEST        = ./test
 DIR_TEST_PROJ   = $(DIR_TEST)/test_project$(PROJECT_IDX)
+DIR_DEFLATE		= ./tools/deflate
+DIR_DEFLIB		= $(DIR_DEFLATE)/lib
+DIR_DECMP		= ./decompressor
 
 BOOTLOADER_ENTRYPOINT   = 0x50200000
 KERNEL_ENTRYPOINT       = 0x50201000
@@ -98,6 +104,8 @@ ELF_USER    = $(patsubst %.c, %, $(foreach file, $(SRC_USER), $(DIR_BUILD)/$(not
 # -----------------------------------------------------------------------
 
 SRC_CREATEIMAGE = ./tools/createimage.c
+SRC_DEFLIB		= $(DIR_DEFLIB)/*.c
+SRC_DEFCOMMON	= $(DIR_DEFLATE)/*.c
 ELF_CREATEIMAGE = $(DIR_BUILD)/$(notdir $(SRC_CREATEIMAGE:.c=))
 
 # -----------------------------------------------------------------------
@@ -158,8 +166,8 @@ elf: $(ELF_BOOT) $(ELF_MAIN) $(ELF_USER)
 # Host Linux Rules
 # -----------------------------------------------------------------------
 
-$(ELF_CREATEIMAGE): $(SRC_CREATEIMAGE)
-	$(HOST_CC) $(SRC_CREATEIMAGE) -o $@ -ggdb -Wall
+$(ELF_CREATEIMAGE): $(SRC_CREATEIMAGE) $(SRC_DEFCOMMON) $(SRC_DEFLIB)
+	$(HOST_CC) $(SRC_CREATEIMAGE) $(SRC_DEFCOMMON) $(SRC_DEFLIB) $(CREATEIMAGE_CFLAGS) -o $@
 
 image: $(ELF_CREATEIMAGE) $(ELF_BOOT) $(ELF_MAIN) $(ELF_USER)
 	cd $(DIR_BUILD) && ./$(<F) --extended $(filter-out $(<F), $(^F))
