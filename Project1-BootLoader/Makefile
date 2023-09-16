@@ -74,7 +74,7 @@ DIR_DECMP		= ./decompressor
 BOOTLOADER_ENTRYPOINT   = 0x50200000
 KERNEL_ENTRYPOINT       = 0x50201000
 USER_ENTRYPOINT         = 0x52000000
-DECOMP_ENTRYPOINT		= 0x53000000
+DECOMP_ENTRYPOINT		= 0x50230000
 
 # -----------------------------------------------------------------------
 # UCAS-OS Kernel Source Files
@@ -136,7 +136,7 @@ asm: $(ELF_BOOT) $(ELF_MAIN) $(ELF_USER) $(ELF_DECMP)
 	for elffile in $^; do $(OBJDUMP) -d $$elffile > $(notdir $$elffile).txt; done
 
 gdb:
-	$(GDB) $(ELF_MAIN) -ex "target remote:1234"
+	$(GDB) $(ELF_DECMP) -ex "target remote:1234"
 
 run:
 	$(QEMU) $(QEMU_OPTS)

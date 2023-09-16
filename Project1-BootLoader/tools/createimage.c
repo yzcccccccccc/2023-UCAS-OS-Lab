@@ -92,7 +92,7 @@ int app_info_bytes, app_info_offset;
 int cur_compr;              // cur for compressing ELF
 char raw_data[BUFFER_SIZE];
 char crp_data[BUFFER_SIZE]; // compressed data
-int main_bytes, main_offset;
+int main_bytes, main_offset, decmp_bytes;
 
 static void create_image(int nfiles, char *files[])
 {
@@ -206,6 +206,8 @@ static void create_image(int nfiles, char *files[])
                 write_padding(img, &phyaddr, phyaddr + app_info_bytes);
             }
 
+            if (strcmp(*files, "ker_decompressor"))
+                decmp_bytes = cur_size;
         /* write padding bytes */
         /**
          * TODO:
@@ -316,9 +318,13 @@ static void write_img_info(int nbytes_kernel, task_info_t *taskinfo,
         short os_size = NBYTES2SEC(main_bytes);
         short os_size_b = (short)main_bytes;
         short w_app_info_offset = (short)app_info_offset;
+        short w_decmp_size = NBYTES2SEC(decmp_bytes);
         
+        // write decmp_bytes
+        fseek(img, OS_SIZE_LOC - 8, SEEK_SET);
+        fwrite(&w_decmp_size, sizeof(short), 1, img);
+
         // write os_size(bytes)
-        fseek(img, OS_SIZE_LOC - 4, SEEK_SET);
         fwrite(&os_size_b, sizeof(short), 1, img);
 
         // write tasknum
@@ -334,6 +340,7 @@ static void write_img_info(int nbytes_kernel, task_info_t *taskinfo,
         printf("\ttasknum: %d\n", tasknum);
         printf("\tos_size: %d bytes, %d sectors\n", os_size_b, os_size);
         printf("\tapp_info_offset: %d\n", app_info_offset);
+        printf("\tdecompressor size: %d\n", decmp_bytes);
         printf("========================================\n");
 
     /* [p1-task4] copy taskinfo into image (APP Info) */

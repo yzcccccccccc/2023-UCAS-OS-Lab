@@ -9,6 +9,9 @@
 // BIOS function entry (jump here to use BIOS APIs)
 .equ bios_func_entry, 0x50150000
 
+// [p1-task5] ker_decompressor address
+.equ ker_decmp_entry, 0x50230000
+
 .text
 .global main
 
@@ -21,6 +24,7 @@ main:
 	la		a0, msg
 	jal		bios_func_entry
 
+/*
 	// TODO: [p1-task2] call BIOS to read kernel in SD card
 	li		a7, BIOS_SDREAD					# func label
 
@@ -38,6 +42,22 @@ main:
 
 
 	// TODO: [p1-task2] jump to kernel to start UCAS-OS
+	j		kernel
+*/
+	// [p1-task5] call BIOS to load ker_decompressor
+	li		a7, BIOS_SDREAD
+
+	la		a0, ker_decmp_entry
+
+	la		t0, os_size_loc
+	lh		a1, -8(t0)
+
+	li		a2, 1
+
+	jal		bios_func_entry
+
+	jal		ker_decmp_entry
+
 	j		kernel
 
 	/************************************************************/

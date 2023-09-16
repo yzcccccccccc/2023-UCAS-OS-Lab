@@ -10,10 +10,10 @@
 #include <os/string.h>
 
 #define RESTORE_LOC         0x50201000
-#define TEMP_LOC            0x52000000
+#define TEMP_LOC            0x50300000
 #define OS_SIZE_BYTES_LOC   0x501001f8
 
-#define MAX_AVAIL_BYTES     8192
+#define MAX_AVAIL_BYTES     100000
 
 int main(){
     char *tmp_ptr = (char *)TEMP_LOC;
