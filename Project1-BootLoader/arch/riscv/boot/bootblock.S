@@ -30,15 +30,17 @@ main:
 
 	la		a0, ker_decmp_entry
 
-	la		t0, os_size_loc
-	lh		a1, -6(t0)
+	la		t0, os_size_loc			# load sectors of ker_decompressor
+	lh		a1, -12(t0)
 
 	li		a2, 1
 
 	jal		bios_func_entry
 
+	// [p1-task5] ker_decompressor !
 	jal		ker_decmp_entry
 
+	// [p1-task5] kernel !
 	j		kernel
 
 	/************************************************************/

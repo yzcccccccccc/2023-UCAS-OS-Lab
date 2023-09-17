@@ -96,7 +96,7 @@ int main_bytes, main_offset, decmp_bytes;
 
 static void create_image(int nfiles, char *files[])
 {
-    int tasknum = nfiles - 2;
+    int tasknum = nfiles - 3;
     int nbytes_kernel = 0;
     int phyaddr = 0;
 
@@ -115,7 +115,7 @@ static void create_image(int nfiles, char *files[])
     /* for each input file */
     for (int fidx = 0; fidx < nfiles; ++fidx) {
 
-        int taskidx = fidx - 2;
+        int taskidx = fidx - 3;
         int cur_size = 0;
 
         cur_compr = 0;
@@ -305,39 +305,40 @@ static void write_img_info(int nbytes_kernel, task_info_t *taskinfo,
     // TODO: [p1-task3] & [p1-task4] write image info to some certain places
     // NOTE: os size, infomation about app-info sector(s) ...
     /* [p1-task5] 
-        write os_size(bytes), tasknum, os size(sectors) and APP-Info offset at the end of bootblock sector 
         Location Demonstration:
-            os_size(bytes) | tasknum(2 bytes) | os_size(2 bytes) | app_info_offset(2 bytes) |(end of bootblock sector)
-        os_size are the size after compressing
+        | decmp_size (sectors), 2B | task_num, 2B | app_info_offset, 4B | os_offset, 4B | os_size (bytes), 4B |
+        os_offset is relevant to current sector
     */
 
-        short os_size = NBYTES2SEC(main_bytes);
-        short os_size_b = (short)main_bytes;
-        short w_app_info_offset = (short)app_info_offset;
-        short w_decmp_size = NBYTES2SEC(decmp_bytes);
+        int os_size             = main_bytes;
+        int os_offset           = main_offset;
+        int w_app_info_offset   = app_info_offset;
+        short w_app_num         = (short)tasknum;
+        short w_decmp_size      = NBYTES2SEC(decmp_bytes);
         
         // write decmp_size
-        fseek(img, OS_SIZE_LOC - 6, SEEK_SET);
+        fseek(img, OS_SIZE_LOC - 12, SEEK_SET);
         fwrite(&w_decmp_size, sizeof(short), 1, img);
 
-        // write os_size(bytes)
-        fwrite(&os_size_b, sizeof(short), 1, img);
-
-        // write tasknum
-        fwrite(&tasknum, sizeof(short), 1, img);
-
-        // write os_size (sector)
-        fwrite(&os_size, sizeof(short), 1, img);
+        // write task_num
+        fwrite(&w_app_num, sizeof(short), 1, img);
 
         // write app_info_offset
-        fwrite(&w_app_info_offset, sizeof(short), 1, img);
+        fwrite(&app_info_offset, sizeof(int), 1, img);
 
-        printf("================== write img info ==================\n");
-        printf("\ttasknum: %d\n", tasknum);
-        printf("\tos_size: %d bytes, %d sectors\n", os_size_b, os_size);
-        printf("\tapp_info_offset: %d\n", app_info_offset);
+        // write os_offset
+        fwrite(&os_offset, sizeof(int), 1, img);
+
+        // write os_size
+        fwrite(&os_size, sizeof(int), 1, img);
+
+        printf("===================== write img info ======================\n");
         printf("\tdecompressor size: %d bytes, %d sectors\n", decmp_bytes, w_decmp_size);
-        printf("====================================================\n");
+        printf("\tapp_info_offset:\t%d\n", app_info_offset);
+        printf("\ttasknum:\t\t%d\n", tasknum);
+        printf("\tos_offset:\t\t%d\n", os_offset);
+        printf("\tos_size:\t\t%d bytes\n", os_size);
+        printf("===========================================================\n");
 
     /* [p1-task4] copy taskinfo into image (APP Info) */
         fseek(img, app_info_offset, SEEK_SET);
