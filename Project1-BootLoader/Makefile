@@ -37,8 +37,8 @@ CFLAGS          = -O0 -fno-builtin -nostdlib -nostdinc -Wall -mcmodel=medany -gg
 BOOT_INCLUDE    = -I$(DIR_ARCH)/include
 BOOT_CFLAGS     = $(CFLAGS) $(BOOT_INCLUDE) -Wl,--defsym=TEXT_START=$(BOOTLOADER_ENTRYPOINT) -T riscv.lds
 
-KERNEL_INCLUDE  = -I$(DIR_ARCH)/include -Iinclude
-KERNEL_CFLAGS   = $(CFLAGS) $(KERNEL_INCLUDE) -Wl,--defsym=TEXT_START=$(KERNEL_ENTRYPOINT) -T riscv.lds
+KERNEL_INCLUDE  = -I$(DIR_ARCH)/include -Iinclude -I$(DIR_DEFLIB) -I$(DIR_DEFLATE)
+KERNEL_CFLAGS   = $(CFLAGS) $(KERNEL_INCLUDE) -Wl,--defsym=TEXT_START=$(KERNEL_ENTRYPOINT) -T riscv.lds -Wall -DFREESTANDING -ggdb
 
 USER_INCLUDE    = -I$(DIR_TINYLIBC)/include
 USER_CFLAGS     = $(CFLAGS) $(USER_INCLUDE)
@@ -87,7 +87,7 @@ SRC_INIT    = $(wildcard $(DIR_INIT)/*.c)
 SRC_KERNEL  = $(wildcard $(DIR_KERNEL)/*/*.c)
 SRC_LIBS    = $(wildcard $(DIR_LIBS)/*.c)
 
-SRC_MAIN    = $(SRC_ARCH) $(SRC_INIT) $(SRC_BIOS) $(SRC_KERNEL) $(SRC_LIBS)
+SRC_MAIN    = $(SRC_ARCH) $(SRC_INIT) $(SRC_BIOS) $(SRC_KERNEL) $(SRC_LIBS) $(SRC_DEF)
 
 SRC_DEF		= $(wildcard $(DIR_DEFLATE)/*.c) $(wildcard $(DIR_DEFLIB)/*.c)
 SRC_DECMP	= $(SRC_ARCH) $(DIR_DECMP)/ker_decompressor.c  $(SRC_DEF) $(SRC_LIBS) $(SRC_BIOS)
@@ -136,7 +136,7 @@ asm: $(ELF_BOOT) $(ELF_MAIN) $(ELF_USER) $(ELF_DECMP)
 	for elffile in $^; do $(OBJDUMP) -d $$elffile > $(notdir $$elffile).txt; done
 
 gdb:
-	$(GDB) $(ELF_DECMP) -ex "target remote:1234"
+	$(GDB) $(ELF_MAIN) -ex "target remote:1234"
 
 run:
 	$(QEMU) $(QEMU_OPTS)

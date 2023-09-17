@@ -170,9 +170,9 @@ static void create_image(int nfiles, char *files[])
                     main_bytes = out_nbytes;
                     printf("===========================================================\n");
                     printf("* Adding MAIN:\n");
-                    printf("* task name: main\n");
-                    printf("* task offset: %d\n", main_offset);
-                    printf("* task size: %d\n", main_bytes);
+                    printf("* task name:\tmain\n");
+                    printf("* task offset:\t%d\n", main_offset);
+                    printf("* task size:\t%d\n", main_bytes);
                     printf("===========================================================\n");
                 }
                 else{
@@ -180,10 +180,10 @@ static void create_image(int nfiles, char *files[])
                     printf("* Adding task:\n");
                     taskinfo[taskidx].size = out_nbytes;
                     memcpy(taskinfo[taskidx].task_name, *files, strlen(*files));
-                    printf("* task name: %s\n", taskinfo[taskidx].task_name);
-                    printf("* task offset: %d\n", taskinfo[taskidx].offset);
-                    printf("* task size: %d\n", taskinfo[taskidx].size);
-                    printf("* task id: %d\n", taskidx);
+                    printf("* task name:\t%s\n", taskinfo[taskidx].task_name);
+                    printf("* task offset:\t%d\n", taskinfo[taskidx].offset);
+                    printf("* task size:\t%d\n", taskinfo[taskidx].size);
+                    printf("* task id:\t%d\n", taskidx);
                     printf("===========================================================\n");
                 }
             }

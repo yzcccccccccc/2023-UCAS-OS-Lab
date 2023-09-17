@@ -51,9 +51,9 @@ int main(){
     int os_st_sec   = os_offset / SECTOR_SIZE;
     int os_sectors  = NBYTES2SEC(os_size + os_offset) - os_st_sec;
 
-    bios_sd_read(compressed, os_sectors, os_st_sec);               // Rough Load
+    bios_sd_read(compressed, os_sectors, os_st_sec);                    // Rough Load
 
-    ptr = (compressed + os_offset % SECTOR_SIZE);                      // Fine Load
+    ptr = (compressed + os_offset % SECTOR_SIZE);                       // Fine Load
     for (int i = 0; i < os_size; i++){
         compressed[i] = *ptr;
         ptr++;
