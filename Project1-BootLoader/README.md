@@ -107,10 +107,11 @@ Project1-BootLoader
 
 ### 镜像文件结构
 笔者设计的镜像文件结构如下：
-![Alt text](pic/2f17c97658a288258ce4fdd8b34f9cf.jpg)
+<center><img src="pic/2f17c97658a288258ce4fdd8b34f9cf.jpg" width="80%"></center>
 
 在bootloader的填充段末位增加以下信息：
-![Alt text](pic/7f1cf68d6a5a5bcc0af2313e213b6ca.jpg)
+<center><img src="pic/7f1cf68d6a5a5bcc0af2313e213b6ca.jpg" width="80%"></center>
+
 **tasknum**即用户程序的数量，**os_size**为kernel所占的扇区个数，**APPinfo offset**为存储用户程序信息的字块的偏移位置。
 
 ### 文件改动
@@ -156,9 +157,11 @@ typedef struct {
 
 ### 镜像文件结构
 Task5中的镜像结构如下：
-![Alt text](pic/6031313108f80c0436d621e390cd06e.jpg)
+<center><img src="pic/6031313108f80c0436d621e390cd06e.jpg" width="80%"></center>
+
 BootLoader的末尾填充中增加以下信息：
-![Alt text](pic/6a8d4427e5e2c9fdf619e65f1b75a74.jpg)
+<center><img src="pic/6a8d4427e5e2c9fdf619e65f1b75a74.jpg" width="80%"></center>
+
 其中os_offset为kernel起始位置在镜像中的偏移，os_size为kernel大小，以字节为单位。
 
 ### 运行流程
@@ -170,7 +173,7 @@ Kernel运行时，当遇到需要启动用户程序，同样是将压缩的应�
 目前暂时将自解压程序decompressor摆放在kernel后的内存地址0x50230000，若之后随着kernel所占字节数的增加，为避免自解压时的覆盖，也可能将该位置继续后移。
 
 整体内存摆放如下：
-![Alt text](pic/4226fd7d0f08dec9fb868c3c42d6473.jpg)
+<center><img src="pic/4226fd7d0f08dec9fb868c3c42d6473.jpg" width="80%"></center>
 
 
 ### 文件改动
