@@ -1,5 +1,5 @@
 # Project1 BootLoader
-## Overview
+## **1. Overview**
 目录结构如下：
 ```
 Project1-BootLoader
@@ -77,7 +77,7 @@ Project1-BootLoader
 
 23 directories, 48 files
 ```
-## Task 1~3
+## **2.Task 1~3**
 本部分主要工作是实现镜像文件打包（createimage），通过bootloader将内核加载到内存并运行，最后在内核中实现用户程序的加载和运行。对应tag为`p1-task1`、`p1-task2`以及`p1-task3`。
 
 涉及的改动如下：
@@ -102,7 +102,7 @@ Project1-BootLoader
 
 `/tools/createimage.c`：完成将bootloader、kernel以及用户程序ELF的打包。其中，bootloader填充到1个扇区，kernel以及用户程序各填充到15个扇区。最后在头一个扇区的倒数第4个字节（0x502001fc）的位置写上kernel所占的扇区数。
 
-## Task 4
+## **3. Task 4**
 本部分主要工作时在镜像文件打包时实现紧密排列，并且在内核中支持通过文件名的方式启动用户程序。对应tag为`p1-task4`。
 
 ### 镜像文件结构
@@ -142,6 +142,7 @@ typedef struct {
 支持通过用户程序名装载函数，并返回用户程序入口地址。装载失败（如用户程序不存在）时，返回值为0。装载用户程序时同样采用粗拷贝-细拷贝的方式。
 
 **Createimage**
+
 `/tools/createimage.c`：
 在上文所示位置写入APP-Info（task_info结构体所需要的内容）以及在第一个扇区末尾写入规定的信息。除了bootblock外，其余程序不再进行填充。
 
@@ -149,7 +150,7 @@ typedef struct {
 1. 笔者开始时设计在bootblock加载kernel时将APP-Info一起加载入内存，然而并不能成功。原因是APP-Info所在位置恰好为kernel的bss段，会被`head.S`清空。
 2. 在粗粒度加载时（APP-Info以及用户程序），请务必注意起始扇区编号以及需要读取的扇区个数。
 
-## Task 5
+## **4. Task 5**
 本部分主要工作是在打包镜像文件时将kernel以及用户程序压缩，并且编写内核的自解压程序。对应tag为`p1-task5`。
 
 ### 镜像文件结构
