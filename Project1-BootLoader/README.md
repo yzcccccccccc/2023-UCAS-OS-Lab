@@ -141,7 +141,7 @@ typedef struct {
 
 
 `/kernel/loader/loader.c`：
-支持通过用户程序名装载函数，并返回用户程序入口地址。装载失败（如用户程序不存在）时，返回值为0。装载用户程序时同样采用粗拷贝-细拷贝的方式。
+支持通过用户程序名装载程序，并返回用户程序入口地址。装载失败（如用户程序不存在）时，返回值为0。装载用户程序时同样采用粗拷贝-细拷贝的方式。
 
 **Createimage**
 
@@ -202,3 +202,23 @@ Kernel运行时，当遇到需要启动用户程序，同样是将压缩的应�
 
 ### Hint
 由于自解压时需要C环境，因此笔者在编译时将`decompressor.c`和`head.S`一同编译。
+
+## **5. 运行流程**
+**task1 ~ task2**：
+
+```bash
+make dirs
+make elf
+cd build && ./createimage --extended bootblock main
+cd ..
+make run
+```
+
+**task3 ~ task5**：
+
+```bash
+make all
+make run
+```
+
+Qemu启动后，当出现"=>"提示输入命令时，键入"loadboot"加载bootblock以启动系统。
