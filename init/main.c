@@ -129,51 +129,6 @@ int main(void)
     // TODO: Load tasks by either task id [p1-task3] or task name [p1-task4],
     //   and then execute them.
 
-    /* [p1-task2] echo! 
-        char ch;
-        while (1){
-            ch = port_read_ch();
-            if (ch == 255)
-                continue;
-            else{
-                if (ch == '\r')
-                    bios_putstr("\n\r");
-                else
-                    bios_putchar(ch);
-            }
-        }
-    */
-
-    /* [p1-task3] load via task id 
-        bios_putstr("Input task id:\n\r");
-        int task_id = 0;
-        char ch;
-        while (1){
-            ch = port_read_ch();
-            if (ch == 255)
-                continue;
-            else{
-                if (ch == '\r'){
-                    bios_putstr("\n\r");
-                    if (0 <= task_id && task_id <= 3){
-                        bios_putstr("Loading task...\n\r");
-                        unsigned func_addr = load_task_img(task_id);
-                        void (*func_pointer)() = func_addr;
-                        (*func_pointer)();
-                    }
-                    else{
-                        bios_putstr("Invalid task id! \n\r");
-                    }
-                    task_id = 0;
-                }
-                else{
-                    bios_putchar(ch);
-                    task_id = task_id * 10 + ch - '0';
-                }
-            }
-        }
-    */
-
     /* [p1-task4] load vias task name */
         bios_putstr("Input task name: \n\r");
         char ch;
