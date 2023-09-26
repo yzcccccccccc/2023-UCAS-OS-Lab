@@ -90,7 +90,6 @@ static void create_image(int nfiles, char *files[])
     int tasknum = nfiles - 2;
     int nbytes_kernel = 0;
     int phyaddr = 0;
-
     FILE *fp = NULL, *img = NULL;
     Elf64_Ehdr ehdr;
     Elf64_Phdr phdr;
@@ -179,7 +178,6 @@ static void create_image(int nfiles, char *files[])
         fclose(fp);
         files++;
     }
-
     write_img_info(nbytes_kernel, taskinfo, tasknum, img);
 
     fclose(img);

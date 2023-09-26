@@ -13,14 +13,12 @@ uint64_t load_task_img(char *taskname)
 
     /* [p1-task4] load via task name */
         bios_putstr("****************************************\n\r");
-        int task_size, task_offset, check_mark;
+        int task_size, task_offset;
         int st_sec_id, occ_sec_num;                 // start sector id and occupied sectors
-        unsigned task_addr;
+        unsigned task_addr = 0;
 
-        check_mark = 0;
         for (int i = 0; i < task_num; i++){
             if (strcmp(taskname, tasks[i].task_name) == 0){
-                check_mark = 1;
                 bios_putstr("Task check-in: [");
                 bios_putstr(taskname);
                 bios_putstr("], transporting to memory ...\n\r");
