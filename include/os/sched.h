@@ -34,6 +34,8 @@
 
 #define NUM_MAX_TASK 16
 
+#define MAX_NAME_LEN 32
+
 /* used to save register infomation */
 typedef struct regs_context
 {
@@ -62,6 +64,8 @@ typedef enum {
 } task_status_t;
 
 /* Process Control Block */
+#define LIST_PCB_OFFSET 16
+
 typedef struct pcb
 {
     /* register context */
@@ -84,6 +88,9 @@ typedef struct pcb
 
     /* time(seconds) to wake up sleeping PCB */
     uint64_t wakeup_time;
+
+    /* name */
+    char name[MAX_NAME_LEN];
 
 } pcb_t;
 

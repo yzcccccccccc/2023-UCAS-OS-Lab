@@ -279,11 +279,11 @@ static void write_img_info(int nbytes_kernel, task_info_t *taskinfo,
         // write app_info_offset
         fwrite(&w_app_info_offset, sizeof(short), 1, img);
 
-        printf("====== write img info ======\n");
+        printf("===================== Write Img Info ======================\n");
         printf("\ttasknum: %d\n", tasknum);
-        printf("\tos_size: %d\n", os_size);
-        printf("\tapp_info_offset: %d\n", app_info_offset);
-        printf("============================\n");
+        printf("\tos_size: %d sectors\n", os_size);
+        printf("\tapp_info_offset: %d bytes\n", app_info_offset);
+        printf("===========================================================\n");
 
     /* [p1-task4] copy taskinfo into image (APP Info) */
         fseek(img, app_info_offset, SEEK_SET);

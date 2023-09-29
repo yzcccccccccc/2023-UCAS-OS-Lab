@@ -12,7 +12,7 @@ int main(void)
     for (int i = 0;; i++)
     {
         sys_move_cursor(0, print_location);
-        printf("> [TASK] This task is to test scheduler. (%d)", i);
+        printf("> [TASK: print1] This task is to test scheduler. (%d)", i);
         sys_yield();
     }
 }

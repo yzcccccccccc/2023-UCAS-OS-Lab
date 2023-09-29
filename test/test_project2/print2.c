@@ -7,12 +7,12 @@
 */
 int main(void)
 {
-    int print_location = 1;
+    int print_location = 2;
 
     for (int i = 0;; i++)
     {
         sys_move_cursor(0, print_location);
-        printf("> [TASK] This task is to test scheduler. (%d)", i);
+        printf("> [TASK: print2] This task is to test scheduler. (%d)", i);
         sys_yield();
     }
 }

@@ -12,7 +12,8 @@ const ptr_t pid0_stack = INIT_KERNEL_STACK + PAGE_SIZE;
 pcb_t pid0_pcb = {
     .pid = 0,
     .kernel_sp = (ptr_t)pid0_stack,
-    .user_sp = (ptr_t)pid0_stack
+    .user_sp = (ptr_t)pid0_stack,
+    .name = "init"
 };
 
 LIST_HEAD(ready_queue);
@@ -33,10 +34,26 @@ void do_scheduler(void)
     /************************************************************/
 
     // TODO: [p2-task1] Modify the current_running pointer.
+    if (list_empty(&ready_queue))
+        return;
+    
+    list_node_t *next_node = list_pop(&ready_queue);
+    pcb_t *prev = current_running;
+    pcb_t *next = (pcb_t *)((void *)next_node - LIST_PCB_OFFSET);
 
+    //printk("Switch: [%d]%s -> [%d]%s\r\n", prev->pid, prev->name, next->pid, next->name);
+
+    if (prev->status == TASK_RUNNING){
+        prev->status = TASK_READY;
+        list_insert(&ready_queue, &(prev->list));
+    }
+
+    next->status = TASK_RUNNING;
+    process_id = next->pid;
+    current_running = next;
 
     // TODO: [p2-task1] switch_to current_running
-
+    switch_to(prev, current_running);
 }
 
 void do_sleep(uint32_t sleep_time)

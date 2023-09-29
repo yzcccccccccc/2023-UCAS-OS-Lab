@@ -24,6 +24,8 @@ task_info_t tasks[TASK_MAXNUM];
 // [p1-task4] task num
 short task_num, app_info_offset, os_size;
 
+int pid_n;
+
 static void init_jmptab(void)
 {
     volatile long (*(*jmptab))() = (volatile long (*(*))())KERNEL_JMPTAB_BASE;
@@ -120,16 +122,37 @@ static void init_pcb_stack(
      */
     switchto_context_t *pt_switchto =
         (switchto_context_t *)((ptr_t)pt_regs - sizeof(switchto_context_t));
+    for (int i = 0; i < 14; i++)
+        pt_switchto->regs[i] = 0;
+    pcb->kernel_sp = (reg_t)pt_switchto;
+    pt_switchto->regs[1] = pcb->kernel_sp;              // sp
+    pt_switchto->regs[0] = (reg_t)entry_point;          // ra
 
 }
 
 static void init_pcb(void)
 {
     /* TODO: [p2-task1] load needed tasks and init their corresponding PCB */
+    for (int i = 0; i < task_num; i++){
+        if (!strcmp(tasks[i].task_name, "print1") || !strcmp(tasks[i].task_name, "print2") || !strcmp(tasks[i].task_name, "fly")){
+            ptr_t entry_point = (load_task_img(tasks[i].task_name));
+            pid_n++;
 
+            pcb_t* pcb_new = pcb + pid_n;
+            pcb_new->kernel_sp = allocKernelPage(1) + PAGE_SIZE;
+            pcb_new->user_sp = allocUserPage(1) + PAGE_SIZE;
+            pcb_new->pid = pid_n;
+            pcb_new->status = TASK_READY;
+            pcb_new->cursor_x = pcb_new->cursor_y = 0;
+            strcpy(pcb_new->name, tasks[i].task_name);
+            list_insert(&ready_queue, &pcb_new->list);
+
+            init_pcb_stack(pcb_new->kernel_sp, pcb_new->user_sp, entry_point, pcb_new);
+        }
+    }
 
     /* TODO: [p2-task1] remember to initialize 'current_running' */
-
+    current_running = &pid0_pcb;
 }
 
 static void init_syscall(void)
@@ -176,47 +199,15 @@ int main(void)
     // TODO: Load tasks by either task id [p1-task3] or task name [p1-task4],
     //   and then execute them.
 
-    /* [p1-task4] load vias task name */
-        bios_putstr("Input task name: \n\r");
-        char ch;
-        char task_name_buf[TASK_NAME_LEN];
-        int name_idx = 0;
-        while (1){
-            ch = port_read_ch();
-            if (ch == 255)
-                continue;
-            else{
-                if (ch == '\r'){
-                    bios_putstr("\n\r");
-                    task_name_buf[name_idx] = '\0';
-                    bios_putstr("\n\r========================================\n\r");
-                    bios_putstr("Loading Task via name[");
-                    bios_putstr(task_name_buf);
-                    bios_putstr("]\n\r");
-
-                    unsigned func_addr = load_task_img(task_name_buf);
-                    if (func_addr != 0){
-                       void (*func_pointer)() = func_addr;
-                        (*func_pointer)(); 
-                    }
-                    else{
-                        bios_putstr("Unknown Task!\n\r");
-                    }
-                    name_idx = 0;
-                    bios_putstr("========================================\n\r");
-                    bios_putstr("\n\rInput task name: \n\r");
-                }
-                else{
-                    bios_putchar(ch);
-                    task_name_buf[name_idx] = ch;
-                    name_idx++;
-                }
-            }
-        }
     // Infinite while loop, where CPU stays in a low-power state (QAQQQQQQQQQQQ)
     while (1)
     {
-        asm volatile("wfi");
+        // If you do non-preemptive scheduling, it's used to surrender control
+        do_scheduler();
+
+        // If you do preemptive scheduling, they're used to enable CSR_SIE and wfi
+        // enable_preempt();
+        // asm volatile("wfi");
     }
 
     return 0;

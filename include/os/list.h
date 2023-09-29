@@ -51,5 +51,31 @@ typedef list_node_t list_head;
 #define LIST_HEAD(name) struct list_node name = {&(name), &(name)}
 
 /* TODO: [p2-task1] implement your own list API */
+// int list_empty(head_ptr): return 1 if list is empty
+static inline int list_empty(list_node_t *list_head_ptr){
+    return list_head_ptr->next == list_head_ptr;
+}
+
+// void list_insert(head_ptr, node_ptr): insert node into head
+static inline void list_insert(list_node_t *list_head_ptr, list_node_t *list_node_ptr){
+    list_node_t *ptr = list_head_ptr;
+    while (ptr->next != list_head_ptr) ptr = ptr->next;
+    list_node_ptr->prev = ptr;
+    ptr->next = list_node_ptr;
+    list_node_ptr->next = list_head_ptr;
+    list_head_ptr->prev = list_node_ptr;
+    return;
+}
+
+// list_node_t *list_delete(head_ptr): pop node from head
+static inline list_node_t *list_pop(list_node_t *list_head_ptr){
+    if (list_empty(list_head_ptr))
+        return NULL;
+    list_node_t *ret = list_head_ptr->next;
+    list_head_ptr->next = list_head_ptr->next->next;
+    list_head_ptr->next->prev = list_head_ptr;
+    ret->next = ret->prev = ret;
+    return ret;
+}
 
 #endif
