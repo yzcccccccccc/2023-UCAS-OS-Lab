@@ -136,7 +136,8 @@ static void init_pcb(void)
 {
     /* TODO: [p2-task1] load needed tasks and init their corresponding PCB */
     for (int i = 0; i < task_num; i++){
-        if (!strcmp(tasks[i].task_name, "print1") || !strcmp(tasks[i].task_name, "print2") || !strcmp(tasks[i].task_name, "fly")){
+        if (!strcmp(tasks[i].task_name, "print1") || !strcmp(tasks[i].task_name, "print2") || !strcmp(tasks[i].task_name, "fly")
+            || !strcmp(tasks[i].task_name, "lock1") || !strcmp(tasks[i].task_name, "lock2")){
             ptr_t entry_point = (load_task_img(tasks[i].task_name));
             pid_n++;
 

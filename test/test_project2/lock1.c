@@ -25,7 +25,7 @@ int main(void)
         printf("%s", blank);
 
         sys_move_cursor(0, print_location);
-        printf("> [TASK] Applying for a lock.\n");
+        printf("> [TASK: lock1] Applying for a lock.\n");
 
         sys_yield();
 
@@ -34,7 +34,7 @@ int main(void)
         for (int i = 0; i < 5; i++)
         {
             sys_move_cursor(0, print_location);
-            printf("> [TASK] Has acquired lock and running.(%d)\n", i);
+            printf("> [TASK: lock1] Has acquired lock and running.(%d)\n", i);
             sys_yield();
         }
 
@@ -42,7 +42,7 @@ int main(void)
         printf("%s", blank);
 
         sys_move_cursor(0, print_location);
-        printf("> [TASK] Has acquired lock and exited.\n");
+        printf("> [TASK: lock1] Has acquired lock and exited.\n");
 
         sys_mutex_release(mutex_id);
 
