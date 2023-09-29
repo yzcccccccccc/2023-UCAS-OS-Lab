@@ -7,7 +7,7 @@
 */
 int main(void)
 {
-    int print_location = 2;
+    int print_location = 1;
 
     for (int i = 0;; i++)
     {
