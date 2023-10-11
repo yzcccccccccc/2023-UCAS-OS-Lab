@@ -79,7 +79,7 @@ static void init_task_info(void)
     os_size = *(info_ptr + 1);
     app_info_offset = *(info_ptr + 2);
 
-    bios_putstr("=======================================\n\r");
+    bios_putstr("=======================================================================\n\r");
     bios_putstr("\tTask Num: ");
     my_print_int((int)task_num);
     bios_putstr("\n\r\n\r");
@@ -91,7 +91,7 @@ static void init_task_info(void)
     bios_putstr("\tAPP-Info Offset: ");
     my_print_int((int)app_info_offset);
     bios_putstr(" bytes\n\r");
-    bios_putstr("=======================================\n\r");
+    bios_putstr("=======================================================================\n\r");
 
     // loading APP Info to taskinfo[]
     task_info_t *task_info_ptr;
@@ -141,26 +141,28 @@ static void init_pcb(void)
 {
     /* TODO: [p2-task1] load needed tasks and init their corresponding PCB */
     for (int i = 0; i < task_num; i++){
-        if (!strcmp(tasks[i].task_name, "print1") || !strcmp(tasks[i].task_name, "print2") || !strcmp(tasks[i].task_name, "fly")
-            || !strcmp(tasks[i].task_name, "lock1") || !strcmp(tasks[i].task_name, "lock2") || !strcmp(tasks[i].task_name, "sleep")){
-            ptr_t entry_point = (load_task_img(tasks[i].task_name));
-            pid_n++;
+        ptr_t entry_point = (load_task_img(tasks[i].task_name));
+        pid_n++;
 
-            pcb_t* pcb_new = pcb + pid_n;
-            pcb_new->kernel_sp = allocKernelPage(1) + PAGE_SIZE;
-            pcb_new->user_sp = allocUserPage(1) + PAGE_SIZE;
-            pcb_new->pid = pid_n;
-            pcb_new->status = TASK_READY;
-            pcb_new->cursor_x = pcb_new->cursor_y = 0;
-            strcpy(pcb_new->name, tasks[i].task_name);
-            list_insert(&ready_queue, &pcb_new->list);
+        pcb_t* pcb_new = pcb + pid_n;
+        pcb_new->kernel_sp = allocKernelPage(1) + PAGE_SIZE;
+        pcb_new->user_sp = allocUserPage(1) + PAGE_SIZE;
+        pcb_new->pid = pid_n;
+        pcb_new->status = TASK_READY;
+        pcb_new->cursor_x = pcb_new->cursor_y = 0;
+        strcpy(pcb_new->name, tasks[i].task_name);
+        list_insert(&ready_queue, &pcb_new->list);
 
-            init_pcb_stack(pcb_new->kernel_sp, pcb_new->user_sp, entry_point, pcb_new);
-        }
+        init_pcb_stack(pcb_new->kernel_sp, pcb_new->user_sp, entry_point, pcb_new);
     }
 
     /* TODO: [p2-task1] remember to initialize 'current_running' */
     current_running = &pid0_pcb;
+    asm volatile ("mv tp, %0\n\t"
+                :
+                :"r"(current_running)
+                :"tp"
+                );
 }
 
 static void init_syscall(void)
@@ -212,7 +214,7 @@ int main(void)
 
     // TODO: [p2-task4] Setup timer interrupt and enable all interrupt globally
     // NOTE: The function of sstatus.sie is different from sie's
-    
+    bios_set_timer(get_ticks() + TIMER_INTERVAL);
     
     // TODO: Load tasks by either task id [p1-task3] or task name [p1-task4],
     //   and then execute them.
@@ -221,11 +223,11 @@ int main(void)
     while (1)
     {
         // If you do non-preemptive scheduling, it's used to surrender control
-        do_scheduler();
+        //do_scheduler();
 
         // If you do preemptive scheduling, they're used to enable CSR_SIE and wfi
-        // enable_preempt();
-        // asm volatile("wfi");
+        enable_preempt();
+        asm volatile("wfi");
     }
 
     return 0;
