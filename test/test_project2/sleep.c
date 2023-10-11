@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-static char blank[] = {"                                                "};
+static char blank[] = {"                                                                         "};
 
 int main(void)
 {
@@ -13,12 +13,12 @@ int main(void)
         for (int i = 0; i < 10; i++)
         {
             sys_move_cursor(0, print_location);
-            printf("> [TASK] This task is to test sleep. (%d)\n", i);
+            printf("> [TASK: sleep] This task is to test sleep. (%d)\n", i);
             sys_sleep(1);
         }
 
         sys_move_cursor(0, print_location);
-        printf("> [TASK] This task is sleeping, sleep time is %d.\n", sleep_time);
+        printf("> [TASK: sleep] This task is sleeping, sleep time is %d.\n", sleep_time);
 
         /* call syscall sleep() */
         sys_sleep(sleep_time);

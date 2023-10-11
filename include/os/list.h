@@ -67,6 +67,15 @@ static inline void list_insert(list_node_t *list_head_ptr, list_node_t *list_nod
     return;
 }
 
+// delete *ptr node
+static inline void list_delete(list_node_t *ptr){
+    if (list_empty(ptr))
+        return;
+    ptr->prev->next = ptr->next;
+    ptr->next->prev = ptr->prev;
+    ptr->prev = ptr->next = NULL;
+}
+
 // list_node_t *list_delete(head_ptr): pop node from head
 static inline list_node_t *list_pop(list_node_t *list_head_ptr){
     if (list_empty(list_head_ptr))

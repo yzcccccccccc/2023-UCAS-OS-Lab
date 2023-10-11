@@ -116,7 +116,12 @@ static void init_pcb_stack(
       */
     regs_context_t *pt_regs =
         (regs_context_t *)(kernel_stack - sizeof(regs_context_t));
-
+    for (int i = 0; i < 32; i++)
+        pt_regs->regs[i] = 0;
+    pt_regs->regs[2] = (reg_t)user_stack;       // sp
+    pt_regs->regs[4] = (reg_t)pcb;              // tp
+    pt_regs->sepc = (reg_t)entry_point;
+    pt_regs->sstatus = SR_SPIE;
 
     /* TODO: [p2-task1] set sp to simulate just returning from switch_to
      * NOTE: you should prepare a stack, and push some values to
@@ -127,8 +132,8 @@ static void init_pcb_stack(
     for (int i = 0; i < 14; i++)
         pt_switchto->regs[i] = 0;
     pcb->kernel_sp = (reg_t)pt_switchto;
-    pt_switchto->regs[1] = pcb->kernel_sp;              // sp
-    pt_switchto->regs[0] = (reg_t)entry_point;          // ra
+    pt_switchto->regs[1] = kernel_stack;                // sp
+    pt_switchto->regs[0] = (reg_t)ret_from_exception;   // ra
 
 }
 
@@ -137,7 +142,7 @@ static void init_pcb(void)
     /* TODO: [p2-task1] load needed tasks and init their corresponding PCB */
     for (int i = 0; i < task_num; i++){
         if (!strcmp(tasks[i].task_name, "print1") || !strcmp(tasks[i].task_name, "print2") || !strcmp(tasks[i].task_name, "fly")
-            || !strcmp(tasks[i].task_name, "lock1") || !strcmp(tasks[i].task_name, "lock2")){
+            || !strcmp(tasks[i].task_name, "lock1") || !strcmp(tasks[i].task_name, "lock2") || !strcmp(tasks[i].task_name, "sleep")){
             ptr_t entry_point = (load_task_img(tasks[i].task_name));
             pid_n++;
 
@@ -161,6 +166,16 @@ static void init_pcb(void)
 static void init_syscall(void)
 {
     // TODO: [p2-task3] initialize system call table.
+    syscall[SYSCALL_SLEEP]              = (long (*)())do_sleep;
+    syscall[SYSCALL_YIELD]              = (long (*)())do_scheduler;
+    syscall[SYSCALL_WRITE]              = (long (*)())screen_write;
+    syscall[SYSCALL_CURSOR]             = (long (*)())screen_move_cursor;
+    syscall[SYSCALL_REFLUSH]            = (long (*)())screen_reflush;
+    syscall[SYSCALL_GET_TIMEBASE]       = (long (*)())get_time_base;
+    syscall[SYSCALL_GET_TICK]           = (long (*)())get_ticks;
+    syscall[SYSCALL_LOCK_INIT]          = (long (*)())do_mutex_lock_init;
+    syscall[SYSCALL_LOCK_ACQ]           = (long (*)())do_mutex_lock_acquire;
+    syscall[SYSCALL_LOCK_RELEASE]       = (long (*)())do_mutex_lock_release;
 }
 /************************************************************/
 

@@ -7,7 +7,7 @@
 // the Universe, and Everything" :)
 #define LOCK2_KEY 42
 
-static char blank[] = {"                                             "};
+static char blank[] = {"                                                     "};
 
 /**
  * NOTE: bios APIs is used for p2-task1 and p2-task2. You need to change
