@@ -50,6 +50,7 @@ static inline list_node_t *list_pop(list_node_t *list_head_ptr)
 #### 2. 初始化
 一个进程所占用的内存区域如下：  
 <center><img src="pic/ac706ae03c8ae5d0f020f54faa6c4d6.jpg" width="80%"></center>  
+
 因此，在初始化PCB时，需要在内核栈和用户栈上为其分配空间。  
 此外，内核第一次将进程挂载到CPU上时，需要为其准备一个假现场，即伪造相应的寄存器值，使得switch_to函数可以正常运行。其中最需要注意的是ra寄存器，在Part-1中只需令其为对应task的entry_point即可。  
 
