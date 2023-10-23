@@ -86,5 +86,4 @@ static inline list_node_t *list_pop(list_node_t *list_head_ptr){
     ret->next = ret->prev = ret;
     return ret;
 }
-
 #endif

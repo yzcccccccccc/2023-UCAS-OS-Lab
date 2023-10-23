@@ -10,12 +10,14 @@
 #include <os/string.h>
 #include <os/mm.h>
 #include <os/time.h>
+#include <os/_thread.h>
 #include <sys/syscall.h>
 #include <screen.h>
 #include <printk.h>
 #include <assert.h>
 #include <type.h>
 #include <csr.h>
+
 
 extern void ret_from_exception();
 
@@ -121,7 +123,7 @@ static void init_pcb_stack(
     pt_regs->regs[2] = (reg_t)user_stack;       // sp
     pt_regs->regs[4] = (reg_t)pcb;              // tp
     pt_regs->sepc = (reg_t)entry_point;
-    pt_regs->sstatus = SR_SPIE;
+    pt_regs->sstatus = SR_SPIE & ~SR_SPP;
 
     /* TODO: [p2-task1] set sp to simulate just returning from switch_to
      * NOTE: you should prepare a stack, and push some values to
@@ -132,7 +134,7 @@ static void init_pcb_stack(
     for (int i = 0; i < 14; i++)
         pt_switchto->regs[i] = 0;
     pcb->kernel_sp = (reg_t)pt_switchto;
-    pt_switchto->regs[1] = kernel_stack;                // sp
+    pt_switchto->regs[1] = (reg_t)pt_switchto;          // sp
     pt_switchto->regs[0] = (reg_t)ret_from_exception;   // ra
 
 }
@@ -150,6 +152,12 @@ static void init_pcb(void)
         pcb_new->pid = pid_n;
         pcb_new->status = TASK_READY;
         pcb_new->cursor_x = pcb_new->cursor_y = 0;
+
+        // for thread
+        pcb_new->par = NULL;
+        pcb_new->tid = pid_n;
+        pcb_new->thread_type = MAIN_THREAD;
+
         strcpy(pcb_new->name, tasks[i].task_name);
         list_insert(&ready_queue, &pcb_new->list);
 
@@ -178,6 +186,8 @@ static void init_syscall(void)
     syscall[SYSCALL_LOCK_INIT]          = (long (*)())do_mutex_lock_init;
     syscall[SYSCALL_LOCK_ACQ]           = (long (*)())do_mutex_lock_acquire;
     syscall[SYSCALL_LOCK_RELEASE]       = (long (*)())do_mutex_lock_release;
+    syscall[SYSCALL_THREAD_CREATE]      = (long (*)())thread_create;
+    syscall[SYSCALL_THREAD_YIELD]       = (long (*)())thread_yield;
 }
 /************************************************************/
 

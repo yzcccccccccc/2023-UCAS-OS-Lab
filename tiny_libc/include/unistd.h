@@ -13,6 +13,8 @@ long sys_get_tick(void);
 int sys_mutex_init(int key);
 void sys_mutex_acquire(int mutex_idx);
 void sys_mutex_release(int mutex_idx);
+void sys_thread_yield(void);
+void sys_thread_create(uint64_t entry_addr, uint64_t arg);
 
 /************************************************************/
 /* Do not touch this comment. Reserved for future projects. */

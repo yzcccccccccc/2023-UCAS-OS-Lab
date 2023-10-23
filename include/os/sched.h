@@ -63,6 +63,11 @@ typedef enum {
     TASK_EXITED,
 } task_status_t;
 
+typedef enum {
+    MAIN_THREAD,
+    SUB_THREAD
+} thread_type_t;
+
 /* Process Control Block */
 #define LIST_PCB_OFFSET 16
 
@@ -76,11 +81,17 @@ typedef struct pcb
     /* previous, next pointer */
     list_node_t list;
 
+    /* Thread id */         // <- mark as the 'thread group'
+    pid_t tid;
+
     /* process id */
     pid_t pid;
 
     /* BLOCK | READY | RUNNING */
     task_status_t status;
+
+    /* MAIN_THREAD | SUB_THREAD*/
+    thread_type_t thread_type;
 
     /* cursor position */
     int cursor_x;
@@ -92,7 +103,11 @@ typedef struct pcb
     /* name */
     char name[MAX_NAME_LEN];
 
+    /* Father PCB */
+    struct pcb *par;
 } pcb_t;
+
+extern int pid_n;
 
 /* ready queue to run */
 extern list_head ready_queue;
