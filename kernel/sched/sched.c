@@ -102,7 +102,8 @@ void do_exit(){                                         /* Exit current-running 
             asm volatile("wfi");
         }
     }
-    do_scheduler();
+    else
+        do_scheduler();
 }
 
 int do_kill(pid_t pid){                                 /* Kill process of certain pid */

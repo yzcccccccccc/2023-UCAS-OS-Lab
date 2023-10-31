@@ -112,7 +112,10 @@ static void init_task_info(void)
 static void init_pcb(void)
 {
     /* TODO: [p2-task1] load needed tasks and init their corresponding PCB */
-    init_pcb_vname("shell", 0, NULL);
+    char name[] = "shell";
+    char *fake_argv[1];
+    fake_argv[0] = (char *)(&name);
+    init_pcb_vname(name, 1, fake_argv);
 
     /* TODO: [p2-task1] remember to initialize 'current_running' */
     current_running = &pid0_pcb;
@@ -147,6 +150,7 @@ static void init_syscall(void)
     syscall[SYSCALL_EXIT]               = (long (*)())do_exit;
     syscall[SYSCALL_KILL]               = (long (*)())do_kill;
     syscall[SYSCALL_WAITPID]            = (long (*)())do_waitpid;
+    syscall[SYSCALL_GETPID]             = (long (*)())do_getpid;
 }
 /************************************************************/
 

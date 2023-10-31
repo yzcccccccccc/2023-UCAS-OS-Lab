@@ -69,6 +69,9 @@ pid_t init_pcb_vname(char *name, int argc, char *argv[]){
         pcb_new->tid = pid_n;
         pcb_new->thread_type = MAIN_THREAD;
 
+        // [p3] wait_list init
+        pcb_new->wait_list.next = pcb_new->wait_list.prev = &(pcb_new->wait_list);
+
         strcpy(pcb_new->name, tasks[i].task_name);
         list_insert(&ready_queue, &pcb_new->list);
 

@@ -5,9 +5,9 @@
 /* [p3] for ps cmd in shell */
 void do_process_show(){
     printk("[Progress Table :D]\n");
-    printk("\t\t PID \t\t Name \t\t Status\n");
+    printk("\t\t PID \t\t\t\t Name \t\t\t\t\t\t\t\t\t Status\n");
     for (int i = 1; i <= pid_n; i++){
-        printk("\t\t %d \t\t %s \t\t %s\n", pcb[i].pid, pcb[i].name, 
+        printk("\t\t %d \t\t\t\t %s \t\t\t\t\t\t\t\t\t %s\n", pcb[i].pid, pcb[i].name, 
                 (pcb[i].status == TASK_BLOCKED ? "BLOCKED"
                 : pcb[i].status == TASK_READY ? "READY"
                 : pcb[i].status == TASK_RUNNING ? "RUNNING"
@@ -24,4 +24,8 @@ pid_t do_exec(char *name, int argc, char *argv[]){
         printk("Successfully start process %s, pid = %d :)\n", name, pid);
     }
     return pid;
+}
+
+pid_t do_getpid(){
+    return current_running->pid;
 }

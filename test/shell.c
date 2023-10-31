@@ -42,6 +42,7 @@ char buffer[SHELL_BUFF_LEN];
 int buffer_cur = -1;
 
 char arg[ARG_MAX_NUM][ARG_MAX_NUM];
+char *argv[ARG_MAX_NUM];
 
 /* [p3] small tools :D */
 int my_getchar(){
@@ -102,12 +103,13 @@ void exec(){
 
     // get args !
     int arg_num = 0, tmp_cur = 0;
-    cur = 0;
+    cur = 4;
     while (cur < buffer_len){
         while (buffer[cur] == ' ' && cur < buffer_len) cur++;
         tmp_cur = 0;
         while (buffer[cur] != ' ' && cur < buffer_len){
             arg[arg_num][tmp_cur] = buffer[cur];
+            argv[arg_num] = (char *)(arg[arg_num]);
             cur++;
             tmp_cur++;
         }
@@ -115,7 +117,7 @@ void exec(){
     }
 
     // syscall
-    sys_exec(name, arg_num, (char **)arg);
+    sys_exec(name, arg_num, argv);
 }
 
 int check_cmd(){
