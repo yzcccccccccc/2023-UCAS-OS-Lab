@@ -91,7 +91,11 @@ void exec(){
     cur = 4;
     buffer_len = strlen(buffer);
 
-    if (buffer[buffer_len - 1] == '&')  buffer_len--;
+    int need_wait = 1;
+    if (buffer[buffer_len - 1] == '&'){
+        buffer_len--;
+        need_wait = 0;
+    }
     
     // get the name !
     while (buffer[cur] == ' ' && cur < buffer_len) cur++;
@@ -117,7 +121,32 @@ void exec(){
     }
 
     // syscall
-    sys_exec(name, arg_num, argv);
+    pid_t new_pid = sys_exec(name, arg_num, argv);
+    if (new_pid == 0){
+        printf("[Info] Invalid process name. :(\n");
+    }
+    else{
+        printf("[Info] Successfully load %s, pid = %d. :)\n", name, new_pid);
+    }
+    if (need_wait)
+        sys_waitpid(new_pid);
+}
+
+void kill(){
+    int buffer_len = strlen(buffer);
+    int cur = 4, pid = 0;
+    while (buffer[cur] == ' ' && cur < buffer_len) cur++;
+    while (buffer[cur] != ' ' && cur < buffer_len){
+        pid = pid * 10 + buffer[cur] - '0';
+        cur++;
+    }
+    int rtval = sys_kill(pid);
+    if (!rtval){
+        printf("[Info] Fail to kill pid %d. :(\n", pid);
+    }
+    else{
+        printf("[Info] Target pid %d is down! :)\n", pid);
+    }
 }
 
 int check_cmd(){
@@ -134,6 +163,10 @@ int check_cmd(){
     for (int i = 0; i < 4; i++) tmp[i] = buffer[i];
     if (!strcmp(tmp, "exec")){
         exec();
+        cmd_found = 1;
+    }
+    if (!strcmp(tmp, "kill")){
+        kill();
         cmd_found = 1;
     }
     return cmd_found;
@@ -178,13 +211,12 @@ int main(void)
 
         // TODO [P3-task1]: parse input
         // note: backspace maybe 8('\b') or 127(delete)
-
         if (!input_handler(ch)) continue;
 
         // TODO [P3-task1]: ps, exec, kill, clear   
         printf("\n"); 
         if (!check_cmd()){
-            printf("Unknown command :(\n");
+            printf("[Info] Unknown command :(\n");
         }
         printf("> root@UCAS_OS: ");
         buffer_cur = -1;
