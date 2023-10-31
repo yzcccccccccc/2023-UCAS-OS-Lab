@@ -11,6 +11,7 @@
 #include <os/mm.h>
 #include <os/time.h>
 #include <os/_thread.h>
+#include <os/cmd.h>
 #include <sys/syscall.h>
 #include <screen.h>
 #include <printk.h>
@@ -24,7 +25,8 @@ extern void ret_from_exception();
 // Task info array
 task_info_t tasks[TASK_MAXNUM];
 // [p1-task4] task num
-short task_num, app_info_offset, os_size;
+short task_num, os_size;
+int app_info_offset;
 
 int pid_n;
 
@@ -73,13 +75,13 @@ static void init_task_info(void)
 {
     // TODO: [p1-task4] Init 'tasks' array via reading app-info sector
     // NOTE: You need to get some related arguments from bootblock first
-    short *info_ptr = (short *)0x502001fa;
-    unsigned tmp_app_info_addr = 0x52000000;
+    ptr_t info_ptr = 0x502001f8;
+    ptr_t tmp_app_info_addr = 0x52000000;
 
     // loading task num and kernel size
-    task_num = *(info_ptr);
-    os_size = *(info_ptr + 1);
-    app_info_offset = *(info_ptr + 2);
+    app_info_offset = *((int *)info_ptr);
+    os_size = *((short *)(info_ptr + 4));
+    task_num = *((short *)(info_ptr + 6));
 
     bios_putstr("=======================================================================\n\r");
     bios_putstr("\tTask Num: ");
@@ -107,62 +109,10 @@ static void init_task_info(void)
 }
 
 /************************************************************/
-static void init_pcb_stack(
-    ptr_t kernel_stack, ptr_t user_stack, ptr_t entry_point,
-    pcb_t *pcb)
-{
-     /* TODO: [p2-task3] initialization of registers on kernel stack
-      * HINT: sp, ra, sepc, sstatus
-      * NOTE: To run the task in user mode, you should set corresponding bits
-      *     of sstatus(SPP, SPIE, etc.).
-      */
-    regs_context_t *pt_regs =
-        (regs_context_t *)(kernel_stack - sizeof(regs_context_t));
-    for (int i = 0; i < 32; i++)
-        pt_regs->regs[i] = 0;
-    pt_regs->regs[2] = (reg_t)user_stack;       // sp
-    pt_regs->regs[4] = (reg_t)pcb;              // tp
-    pt_regs->sepc = (reg_t)entry_point;
-    pt_regs->sstatus = SR_SPIE & ~SR_SPP;
-
-    /* TODO: [p2-task1] set sp to simulate just returning from switch_to
-     * NOTE: you should prepare a stack, and push some values to
-     * simulate a callee-saved context.
-     */
-    switchto_context_t *pt_switchto =
-        (switchto_context_t *)((ptr_t)pt_regs - sizeof(switchto_context_t));
-    for (int i = 0; i < 14; i++)
-        pt_switchto->regs[i] = 0;
-    pcb->kernel_sp = (reg_t)pt_switchto;
-    pt_switchto->regs[1] = (reg_t)pt_switchto;          // sp
-    pt_switchto->regs[0] = (reg_t)ret_from_exception;   // ra
-
-}
-
 static void init_pcb(void)
 {
     /* TODO: [p2-task1] load needed tasks and init their corresponding PCB */
-    for (int i = 0; i < task_num; i++){
-        ptr_t entry_point = (load_task_img(tasks[i].task_name));
-        pid_n++;
-
-        pcb_t* pcb_new = pcb + pid_n;
-        pcb_new->kernel_sp = allocKernelPage(1) + PAGE_SIZE;
-        pcb_new->user_sp = allocUserPage(1) + PAGE_SIZE;
-        pcb_new->pid = pid_n;
-        pcb_new->status = TASK_READY;
-        pcb_new->cursor_x = pcb_new->cursor_y = 0;
-
-        // for thread
-        pcb_new->par = NULL;
-        pcb_new->tid = pid_n;
-        pcb_new->thread_type = MAIN_THREAD;
-
-        strcpy(pcb_new->name, tasks[i].task_name);
-        list_insert(&ready_queue, &pcb_new->list);
-
-        init_pcb_stack(pcb_new->kernel_sp, pcb_new->user_sp, entry_point, pcb_new);
-    }
+    init_pcb_vname("shell", 0, NULL);
 
     /* TODO: [p2-task1] remember to initialize 'current_running' */
     current_running = &pid0_pcb;
@@ -188,6 +138,15 @@ static void init_syscall(void)
     syscall[SYSCALL_LOCK_RELEASE]       = (long (*)())do_mutex_lock_release;
     syscall[SYSCALL_THREAD_CREATE]      = (long (*)())thread_create;
     syscall[SYSCALL_THREAD_YIELD]       = (long (*)())thread_yield;
+
+    syscall[SYSCALL_CURSOR_C]           = (long (*)())screen_move_cursor_c;
+    syscall[SYSCALL_READCH]             = (long (*)())bios_getchar;
+    syscall[SYSCALL_CLEAR]              = (long (*)())screen_clear;
+    syscall[SYSCALL_PS]                 = (long (*)())do_process_show;
+    syscall[SYSCALL_EXEC]               = (long (*)())do_exec;
+    syscall[SYSCALL_EXIT]               = (long (*)())do_exit;
+    syscall[SYSCALL_KILL]               = (long (*)())do_kill;
+    syscall[SYSCALL_WAITPID]            = (long (*)())do_waitpid;
 }
 /************************************************************/
 
@@ -225,9 +184,6 @@ int main(void)
     // TODO: [p2-task4] Setup timer interrupt and enable all interrupt globally
     // NOTE: The function of sstatus.sie is different from sie's
     bios_set_timer(get_ticks() + TIMER_INTERVAL);
-    
-    // TODO: Load tasks by either task id [p1-task3] or task name [p1-task4],
-    //   and then execute them.
 
     // Infinite while loop, where CPU stays in a low-power state (QAQQQQQQQQQQQ)
     while (1)

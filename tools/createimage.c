@@ -267,17 +267,16 @@ static void write_img_info(int nbytes_kernel, task_info_t *taskinfo,
     */
 
         short os_size = NBYTES2SEC(nbytes_kernel);
-        short w_app_info_offset = (short)app_info_offset;
         
-        // write tasknum
-        fseek(img, OS_SIZE_LOC - 2, SEEK_SET);
-        fwrite(&tasknum, sizeof(short), 1, img);
+        // write app_info_offset
+        fseek(img, OS_SIZE_LOC - 4, SEEK_SET);
+        fwrite(&app_info_offset, sizeof(int), 1,img);
 
         // write os_size
         fwrite(&os_size, sizeof(short), 1, img);
 
-        // write app_info_offset
-        fwrite(&w_app_info_offset, sizeof(short), 1, img);
+        // write task_num
+        fwrite(&tasknum, sizeof(short), 1, img);
 
         printf("===================== Write Img Info ======================\n");
         printf("\ttasknum: %d\n", tasknum);

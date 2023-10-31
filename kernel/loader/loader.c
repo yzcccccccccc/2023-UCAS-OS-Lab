@@ -12,16 +12,16 @@ uint64_t load_task_img(char *taskname)
      */
 
     /* [p1-task4] load via task name */
-        bios_putstr("****************************************\n\r");
+        //bios_putstr("****************************************\n\r");
         int task_size, task_offset;
         int st_sec_id, occ_sec_num;                 // start sector id and occupied sectors
         unsigned task_addr = 0;
 
         for (int i = 0; i < task_num; i++){
             if (strcmp(taskname, tasks[i].task_name) == 0){
-                bios_putstr("Task check-in: [");
-                bios_putstr(taskname);
-                bios_putstr("], transporting to memory ...\n\r");
+                //bios_putstr("Task check-in: [");
+                //bios_putstr(taskname);
+                //bios_putstr("], transporting to memory ...\n\r");
 
                 task_size = tasks[i].size;
                 task_offset = tasks[i].offset;
@@ -40,8 +40,8 @@ uint64_t load_task_img(char *taskname)
                     app_ptr++;
                 }
                 
-                bios_putstr("Loading Task Complete.\n\r");
-                bios_putstr("****************************************\n\r");
+                //bios_putstr("Loading Task Complete.\n\r");
+                //bios_putstr("****************************************\n\r");
                 break;
             }
         }

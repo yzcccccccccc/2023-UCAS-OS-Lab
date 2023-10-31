@@ -78,6 +78,17 @@ void screen_move_cursor(int x, int y)
     vt100_move_cursor(x, y);
 }
 
+/* [p3] move cursor comparatively */
+void screen_move_cursor_c(int dx, int dy){
+    int nx = current_running->cursor_x + dx;
+    int ny = current_running->cursor_y + dy;
+    nx = (nx > 0) ? nx : 0;
+    nx = (nx < SCREEN_WIDTH) ? nx : SCREEN_WIDTH;
+    ny = (ny > 0) ? ny : 0;
+    ny = (ny < SCREEN_HEIGHT) ? ny : SCREEN_HEIGHT;
+    screen_move_cursor(nx, ny);
+}
+
 void screen_write(char *buff)
 {
     int i = 0;

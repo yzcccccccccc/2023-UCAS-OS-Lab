@@ -69,7 +69,7 @@ typedef enum {
 } thread_type_t;
 
 /* Process Control Block */
-#define LIST_PCB_OFFSET 16
+#define LIST_PCB_OFFSET 32
 
 typedef struct pcb
 {

@@ -42,4 +42,7 @@ void screen_write(char *buff);
 /* move cursor int (x,y) */
 void screen_move_cursor(int x, int y);
 
+/* move cursor (x, y)->(x+dx, y+dy) */
+void screen_move_cursor_c(int dx, int dy);
+
 #endif

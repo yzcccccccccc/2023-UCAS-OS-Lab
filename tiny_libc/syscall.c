@@ -38,6 +38,12 @@ void sys_move_cursor(int x, int y)
     invoke_syscall(SYSCALL_CURSOR, (long)x, (long)y, 0, 0, 0);
 }
 
+void sys_move_cursor_c(int dx, int dy)
+{
+    /* [p3] move cursor comparatively */
+    invoke_syscall(SYSCALL_CURSOR_C, (long)dx, (long)dy, 0, 0, 0);
+}
+
 void sys_write(char *buff)
 {
     /* TODO: [p2-task3] call invoke_syscall to implement sys_write */
@@ -99,6 +105,12 @@ void sys_thread_create(uint64_t entry_addr, uint64_t arg){
     /* [p2-task5] thread_create*/
     invoke_syscall(SYSCALL_THREAD_CREATE, entry_addr, arg, 0, 0, 0);
 }
+
+void sys_clear(){
+    /* [p3] for shell 'clear' command */
+    invoke_syscall(SYSCALL_CLEAR, 0, 0, 0, 0, 0);
+}
+
 /************************************************************/
 #ifdef S_CORE
 pid_t  sys_exec(int id, int argc, uint64_t arg0, uint64_t arg1, uint64_t arg2)
@@ -109,28 +121,33 @@ pid_t  sys_exec(int id, int argc, uint64_t arg0, uint64_t arg1, uint64_t arg2)
 pid_t  sys_exec(char *name, int argc, char **argv)
 {
     /* TODO: [p3-task1] call invoke_syscall to implement sys_exec */
+    invoke_syscall(SYSCALL_EXEC, (long)name, (long)argc, (long)argv, 0, 0);
 }
 #endif
 
 void sys_exit(void)
 {
     /* TODO: [p3-task1] call invoke_syscall to implement sys_exit */
+    invoke_syscall(SYSCALL_EXIT, 0, 0, 0, 0, 0);
 }
 
 int  sys_kill(pid_t pid)
 {
     /* TODO: [p3-task1] call invoke_syscall to implement sys_kill */
+    return invoke_syscall(SYSCALL_KILL, (long)pid, 0, 0, 0, 0);
 }
 
 int  sys_waitpid(pid_t pid)
 {
     /* TODO: [p3-task1] call invoke_syscall to implement sys_waitpid */
+    return invoke_syscall(SYSCALL_WAITPID, (long)pid, 0, 0, 0, 0);
 }
 
 
 void sys_ps(void)
 {
     /* TODO: [p3-task1] call invoke_syscall to implement sys_ps */
+    invoke_syscall(SYSCALL_PS, 0, 0, 0, 0, 0);
 }
 
 pid_t sys_getpid()
@@ -141,6 +158,7 @@ pid_t sys_getpid()
 int  sys_getchar(void)
 {
     /* TODO: [p3-task1] call invoke_syscall to implement sys_getchar */
+    return invoke_syscall(SYSCALL_READCH, 0, 0, 0, 0, 0);
 }
 
 int  sys_barrier_init(int key, int goal)

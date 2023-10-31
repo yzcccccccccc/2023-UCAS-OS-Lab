@@ -21,13 +21,9 @@ EOLoop:
     /* TODO: [p1-task3] enter main function */
     jal     main
 
-    /* TODO: [p1-task3] finish task and return to the kernel, replace this in p3-task2! */
-    ld      ra, 0(sp)
-    addi    sp, sp, 8
-    ret
-
     /************************************************************/
     /* TODO: [P3] call sys_exit */
+    jal     sys_exit
     /************************************************************/
 // while(1) loop, unreachable here
 loop:

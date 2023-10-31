@@ -49,11 +49,12 @@ int do_mutex_lock_init(int key)
             break;
         }
     }
-    if (lock_id == -1){
+    if (lock_id == -1){                         // allocate one
         for (int i = 0; i < LOCK_NUM; i++){
             if (mlocks[i].key == -1){
                 lock_id = i;
                 mlocks[i].key = key;
+                mlocks[i].pid = -1;
                 break;
             }
         }
@@ -67,16 +68,44 @@ void do_mutex_lock_acquire(int mlock_idx)
     if (spin_lock_try_acquire(&(mlocks[mlock_idx].lock)) == LOCKED){
         do_block(&(current_running->list), &(mlocks[mlock_idx].block_queue));
     }
+    else{
+        mlocks[mlock_idx].pid = current_running->pid;
+    }
 }
 
 void do_mutex_lock_release(int mlock_idx)
 {
     /* TODO: [p2-task2] release mutex lock */
+retry:
     if (list_empty(&(mlocks[mlock_idx].block_queue))){
         spin_lock_release(&(mlocks[mlock_idx].lock));
+        mlocks[mlock_idx].pid = -1;
     }
     else{
-        list_node_t *ptr = list_pop(&(mlocks[mlock_idx].block_queue));
-        do_unblock(ptr);
+        list_node_t *list_ptr;
+        pcb_t *pcb_ptr;
+
+        list_ptr = list_pop(&(mlocks[mlock_idx].block_queue));
+        pcb_ptr = (pcb_t *)(list_ptr - LIST_PCB_OFFSET);
+        if (pcb_ptr->status == TASK_EXITED)
+            goto retry;
+
+        mlocks[mlock_idx].pid = pcb_ptr->pid;
+        do_unblock(list_ptr);
+    }
+}
+
+/* [p3] release lock resources */
+void lock_resource_release(pid_t pid){
+    /*****************************************
+        Hint:
+            only handle the acquired locks.
+            block_queue situation will be 
+        handled when release a mutex.
+    ******************************************/
+    for (int i = 0; i < LOCK_NUM; i++){
+        if (mlocks[i].pid == pid){
+            do_mutex_lock_release(i);
+        }
     }
 }
