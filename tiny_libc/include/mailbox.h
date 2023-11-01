@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <unistd.h>
+#include <stdlib.h>
 
 #define MAX_MBOX_LENGTH (64)
 
