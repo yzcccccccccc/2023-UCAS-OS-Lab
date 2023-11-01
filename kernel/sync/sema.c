@@ -27,6 +27,13 @@ void do_semaphore_up(int sema_idx){
     if (semas[sema_idx].num <= 0){
         // Wake up one process in the waiting queue
         list_node_t *ptr = list_pop(&(semas[sema_idx].wait_queue));
+        pcb_t *pcb_ptr;
+        while (ptr != NULL){
+            pcb_ptr = (pcb_t *)((void *)ptr - LIST_PCB_OFFSET);
+            if (pcb_ptr->status == TASK_BLOCKED)
+                break;
+            ptr = list_pop(&(semas[sema_idx].wait_queue));
+        }
         if (ptr != NULL)
             do_unblock(ptr);
     }
@@ -44,8 +51,11 @@ void do_semaphore_destroy(int sema_idx){
     semas[sema_idx].key = -1;
     // Release the wait queue
     list_node_t *ptr;
+    pcb_t *pcb_ptr;
     while (!list_empty(&(semas[sema_idx].wait_queue))){
         ptr = list_pop(&(semas[sema_idx].wait_queue));
-        do_unblock(ptr);
+        pcb_ptr = (pcb_t *)((void *)ptr - LIST_PCB_OFFSET);
+        if (pcb_ptr->status == TASK_BLOCKED)
+            do_unblock(ptr);
     }
 }

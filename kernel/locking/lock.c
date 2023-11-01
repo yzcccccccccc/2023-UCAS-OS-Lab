@@ -86,7 +86,7 @@ retry:
         pcb_t *pcb_ptr;
 
         list_ptr = list_pop(&(mlocks[mlock_idx].block_queue));
-        pcb_ptr = (pcb_t *)(list_ptr - LIST_PCB_OFFSET);
+        pcb_ptr = (pcb_t *)((void *)list_ptr - LIST_PCB_OFFSET);
         if (pcb_ptr->status == TASK_EXITED)
             goto retry;
 

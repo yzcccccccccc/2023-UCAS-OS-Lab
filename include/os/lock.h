@@ -67,6 +67,10 @@ void lock_resource_release(pid_t pid);
 typedef struct barrier
 {
     // TODO [P3-TASK2 barrier]
+    int goal;               // goal waiting num
+    int cur_num;            // current waiting num
+    int key;                // handle
+    list_head wait_queue;
 } barrier_t;
 
 #define BARRIER_NUM 16

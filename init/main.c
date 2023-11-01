@@ -157,6 +157,9 @@ static void init_syscall(void)
     syscall[SYSCALL_SEMA_UP]            = (long (*)())do_semaphore_up;
     syscall[SYSCALL_SEMA_DOWN]          = (long (*)())do_semaphore_down;
     syscall[SYSCALL_SEMA_DESTROY]       = (long (*)())do_semaphore_destroy;
+    syscall[SYSCALL_BARR_INIT]          = (long (*)())do_barrier_init;
+    syscall[SYSCALL_BARR_WAIT]          = (long (*)())do_barrier_wait;
+    syscall[SYSCALL_BARR_DESTROY]       = (long (*)())do_barrier_destroy;
 }
 /************************************************************/
 
@@ -181,6 +184,7 @@ int main(void)
 
     // Init Synchronization :D
     init_semaphores();
+    init_barriers();
     printk("> [INIT] Synchronization initialization succeeded.\n");
 
     // Init interrupt (^_^)
