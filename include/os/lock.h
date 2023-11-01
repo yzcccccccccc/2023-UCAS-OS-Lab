@@ -50,6 +50,8 @@ typedef struct mutex_lock
     pid_t pid;                  // [p3] owner's pid, init: -1
 } mutex_lock_t;
 
+extern mutex_lock_t mlocks[LOCK_NUM];
+
 void init_locks(void);
 
 void spin_lock_init(spin_lock_t *lock);
@@ -62,6 +64,9 @@ void do_mutex_lock_acquire(int mlock_idx);
 void do_mutex_lock_release(int mlock_idx);
 
 void lock_resource_release(pid_t pid);
+void do_mlock_init_ptr(mutex_lock_t *mlock_ptr);
+void do_mlock_release_ptr(mutex_lock_t *mlock_ptr);
+void do_mlock_acquire_ptr(mutex_lock_t *mlock_ptr);
 
 /************************************************************/
 typedef struct barrier
@@ -96,6 +101,11 @@ void do_condition_signal(int cond_idx);
 void do_condition_broadcast(int cond_idx);
 void do_condition_destroy(int cond_idx);
 
+void do_cond_init_ptr(condition_t *cond_ptr);
+void do_cond_wait_ptr(condition_t *cond_ptr, mutex_lock_t *mlock_ptr);
+void do_cond_signal_ptr(condition_t *cond_ptr);
+void do_cond_broadcast_ptr(condition_t *cond_ptr);
+
 typedef struct semaphore
 {
     // TODO [P3-TASK2 semaphore]
@@ -114,10 +124,17 @@ void do_semaphore_down(int sema_idx);
 void do_semaphore_destroy(int sema_idx);
 
 #define MAX_MBOX_LENGTH (64)
+#define MAX_MBOX_NAME_LEN (20)
 
 typedef struct mailbox
 {
     // TODO [P3-TASK2 mailbox]
+    char name[MAX_MBOX_NAME_LEN];
+    char msg[MAX_MBOX_LENGTH];
+    int allocated;              // 0 for unallocated
+    int head, tail, freespace;
+    mutex_lock_t mlock;
+    condition_t is_full, is_empty;
 } mailbox_t;
 
 #define MBOX_NUM 16
