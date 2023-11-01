@@ -18,7 +18,7 @@ void init_locks(void)
 void spin_lock_init(spin_lock_t *lock)
 {
     /* TODO: [p2-task2] initialize spin lock */
-    lock->status = UNLOCKED;
+    atomic_swap(UNLOCKED, (ptr_t)(&lock->status));
 }
 
 int spin_lock_try_acquire(spin_lock_t *lock)

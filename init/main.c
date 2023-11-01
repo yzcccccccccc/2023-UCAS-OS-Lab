@@ -12,6 +12,7 @@
 #include <os/time.h>
 #include <os/_thread.h>
 #include <os/cmd.h>
+#include <os/sync.h>
 #include <sys/syscall.h>
 #include <screen.h>
 #include <printk.h>
@@ -151,6 +152,11 @@ static void init_syscall(void)
     syscall[SYSCALL_KILL]               = (long (*)())do_kill;
     syscall[SYSCALL_WAITPID]            = (long (*)())do_waitpid;
     syscall[SYSCALL_GETPID]             = (long (*)())do_getpid;
+
+    syscall[SYSCALL_SEMA_INIT]          = (long (*)())do_semaphore_init;
+    syscall[SYSCALL_SEMA_UP]            = (long (*)())do_semaphore_up;
+    syscall[SYSCALL_SEMA_DOWN]          = (long (*)())do_semaphore_down;
+    syscall[SYSCALL_SEMA_DESTROY]       = (long (*)())do_semaphore_destroy;
 }
 /************************************************************/
 

@@ -93,6 +93,10 @@ void do_condition_destroy(int cond_idx);
 typedef struct semaphore
 {
     // TODO [P3-TASK2 semaphore]
+    // spin_lock_t spin_lock; (maybe of use when facing fine lock :D)
+    int num;                // num of resources
+    int key;
+    list_head wait_queue;
 } semaphore_t;
 
 #define SEMAPHORE_NUM 16
