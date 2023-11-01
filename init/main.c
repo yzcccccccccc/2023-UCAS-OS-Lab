@@ -179,6 +179,10 @@ int main(void)
     init_locks();
     printk("> [INIT] Lock mechanism initialization succeeded.\n");
 
+    // Init Synchronization :D
+    init_semaphores();
+    printk("> [INIT] Synchronization initialization succeeded.\n");
+
     // Init interrupt (^_^)
     init_exception();
     printk("> [INIT] Interrupt processing initialization succeeded.\n");

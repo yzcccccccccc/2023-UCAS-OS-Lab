@@ -205,21 +205,25 @@ void sys_condition_destroy(int cond_idx)
 int sys_semaphore_init(int key, int init)
 {
     /* TODO: [p3-task2] call invoke_syscall to implement sys_semaphore_init */
+    return invoke_syscall(SYSCALL_SEMA_INIT, (long)key, (long)init, 0, 0, 0);
 }
 
 void sys_semaphore_up(int sema_idx)
 {
     /* TODO: [p3-task2] call invoke_syscall to implement sys_semaphore_up */
+    invoke_syscall(SYSCALL_SEMA_UP, (long)sema_idx, 0, 0, 0, 0);
 }
 
 void sys_semaphore_down(int sema_idx)
 {
     /* TODO: [p3-task2] call invoke_syscall to implement sys_semaphore_down */
+    invoke_syscall(SYSCALL_SEMA_DOWN, (long)sema_idx, 0, 0, 0, 0);
 }
 
 void sys_semaphore_destroy(int sema_idx)
 {
     /* TODO: [p3-task2] call invoke_syscall to implement sys_semaphore_destroy */
+    invoke_syscall(SYSCALL_SEMA_DESTROY, (long)sema_idx, 0, 0, 0, 0);
 }
 
 int sys_mbox_open(char * name)
