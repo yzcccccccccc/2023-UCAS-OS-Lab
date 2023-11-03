@@ -4,6 +4,7 @@
 #include <os/sched.h>
 #include <os/string.h>
 #include <os/_thread.h>
+#include <os/smp.h>
 #include <printk.h>
 
 extern void ret_from_exception();
@@ -35,6 +36,9 @@ void init_tcb(
 }
 
 pid_t thread_create(uint64_t entry_addr, uint64_t arg){
+    // [p3-multicore]
+    int cpuid = get_current_cpu_id();
+
     if (pid_n > NUM_MAX_TASK)
         return -1;                      // create fail.
     pid_n++;
@@ -44,8 +48,8 @@ pid_t thread_create(uint64_t entry_addr, uint64_t arg){
     pcb_new->pid = pid_n;
     pcb_new->status = TASK_READY;
     pcb_new->cursor_x = pcb_new->cursor_y = 0;
-    pcb_new->par = current_running;
-    pcb_new->tid = current_running->pid;
+    pcb_new->par = current_running[cpuid];
+    pcb_new->tid = current_running[cpuid]->pid;
     pcb_new->thread_type = SUB_THREAD;
     strcpy(pcb_new->name, "thread-sub");
     list_insert(&ready_queue, &(pcb_new->list));
@@ -54,16 +58,19 @@ pid_t thread_create(uint64_t entry_addr, uint64_t arg){
 }
 
 void thread_yield(){
+    // [p3-multicore]
+    int cpuid = get_current_cpu_id();
+
     list_node_t *head_ptr = &ready_queue;
     list_node_t *tmp_ptr = head_ptr->next;
     pcb_t *cur = (pcb_t *)((void *)tmp_ptr - LIST_PCB_OFFSET);
-    pcb_t *prev = current_running;
+    pcb_t *prev = current_running[cpuid];
     if (list_empty(head_ptr)){
         printk("Thread yield fail: Empty ready queue.\n");
         do_scheduler();
     }
 
-    while (tmp_ptr != head_ptr && cur->tid != current_running->tid){
+    while (tmp_ptr != head_ptr && cur->tid != current_running[cpuid]->tid){
         tmp_ptr = tmp_ptr->next;
         cur = (pcb_t *)((void *)tmp_ptr - LIST_PCB_OFFSET);
     }
@@ -79,8 +86,9 @@ void thread_yield(){
             list_insert(&ready_queue, &(prev->list));
         }
         cur->status = TASK_RUNNING;
-        process_id = cur->pid;
-        current_running = cur;
-        switch_to(prev, current_running);
+        cur->cid    = cpuid;
+        process_id[cpuid] = cur->pid;
+        current_running[cpuid] = cur;
+        switch_to(prev, current_running[cpuid]);
     }
 }

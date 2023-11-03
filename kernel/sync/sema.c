@@ -1,4 +1,5 @@
 #include <os/sync.h>
+#include <os/smp.h>
 
 semaphore_t semas[SEMAPHORE_NUM];
 
@@ -40,10 +41,13 @@ void do_semaphore_up(int sema_idx){
 }
 
 void do_semaphore_down(int sema_idx){
+    // [p3-multicore]
+    int cpuid = get_current_cpu_id();
+
     semas[sema_idx].num--;
     if (semas[sema_idx].num < 0){
         // Block current process
-        do_block(&(current_running->list), &(semas[sema_idx].wait_queue));
+        do_block(&(current_running[cpuid]->list), &(semas[sema_idx].wait_queue));
     }
 }
 

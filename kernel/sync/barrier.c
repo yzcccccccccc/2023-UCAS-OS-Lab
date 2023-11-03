@@ -1,4 +1,5 @@
 #include <os/sync.h>
+#include <os/smp.h>
 
 barrier_t barrs[BARRIER_NUM];
 
@@ -25,6 +26,9 @@ int do_barrier_init(int key, int goal){
 }
 
 void do_barrier_wait(int bar_idx){
+    // [p3-multicore]
+    int cpuid = get_current_cpu_id();
+
     barrs[bar_idx].cur_num++;
     if (barrs[bar_idx].cur_num == barrs[bar_idx].goal){
         // Release the waiting queue !!
@@ -36,7 +40,7 @@ void do_barrier_wait(int bar_idx){
         }
     }
     else{
-        do_block(&(current_running->list), &(barrs[bar_idx].wait_queue));
+        do_block(&(current_running[cpuid]->list), &(barrs[bar_idx].wait_queue));
     }
 }
 

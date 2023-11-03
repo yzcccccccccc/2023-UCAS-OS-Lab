@@ -13,6 +13,7 @@
 #include <os/_thread.h>
 #include <os/cmd.h>
 #include <os/sync.h>
+#include <os/smp.h>
 #include <sys/syscall.h>
 #include <screen.h>
 #include <printk.h>
@@ -119,10 +120,10 @@ static void init_pcb(void)
     init_pcb_vname(name, 1, fake_argv);
 
     /* TODO: [p2-task1] remember to initialize 'current_running' */
-    current_running = &pid0_pcb;
+    current_running[0] = &pid0_core0_pcb;
     asm volatile ("mv tp, %0\n\t"
                 :
-                :"r"(current_running)
+                :"r"(current_running[0])
                 :"tp"
                 );
 }
@@ -173,57 +174,100 @@ static void init_syscall(void)
 /************************************************************/
 
 int main(void)
-{
-    // Init jump table provided by kernel and bios(ΦωΦ)
-    init_jmptab();
+{   
+    if (get_current_cpu_id()){
+        /**************************************************
+                Wake up sub core :D
+        **************************************************/
+        lock_kernel();
 
-    // Init task information (〃'▽'〃)
-    init_task_info();
+        setup_exception();
+        bios_set_timer(get_ticks() + TIMER_INTERVAL);
 
-    // Init Process Control Blocks |•'-'•) ✧
-    init_pcb();
-    printk("> [INIT] PCB initialization succeeded.\n");
+        current_running[1] = &pid0_core1_pcb;
+        asm volatile ("mv tp, %0\n\t"
+                :
+                :"r"(current_running[1])
+                :"tp"
+                );
 
-    // Read CPU frequency (｡•ᴗ-)_
-    time_base = bios_read_fdt(TIMEBASE);
+        printk("> [INIT] Sub core initialization succeeded. :D\n");
 
-    // Init lock mechanism o(´^｀)o
-    init_locks();
-    printk("> [INIT] Lock mechanism initialization succeeded.\n");
+        unlock_kernel();
+        while (1)
+        {
+            // If you do non-preemptive scheduling, it's used to surrender control
+            //do_scheduler();
 
-    // Init Synchronization :D
-    init_semaphores();
-    init_barriers();
-    init_conditions();
-    init_mbox();
-    printk("> [INIT] Synchronization initialization succeeded.\n");
-
-    // Init interrupt (^_^)
-    init_exception();
-    printk("> [INIT] Interrupt processing initialization succeeded.\n");
-
-    // Init system call table (0_0)
-    init_syscall();
-    printk("> [INIT] System call initialized successfully.\n");
-
-    // Init screen (QAQ)
-    init_screen();
-    printk("> [INIT] SCREEN initialization succeeded.\n");
-
-    // TODO: [p2-task4] Setup timer interrupt and enable all interrupt globally
-    // NOTE: The function of sstatus.sie is different from sie's
-    bios_set_timer(get_ticks() + TIMER_INTERVAL);
-
-    // Infinite while loop, where CPU stays in a low-power state (QAQQQQQQQQQQQ)
-    while (1)
-    {
-        // If you do non-preemptive scheduling, it's used to surrender control
-        //do_scheduler();
-
-        // If you do preemptive scheduling, they're used to enable CSR_SIE and wfi
-        enable_preempt();
-        asm volatile("wfi");
+            // If you do preemptive scheduling, they're used to enable CSR_SIE and wfi
+            enable_preempt();
+            asm volatile("wfi");
+        }
     }
+    else{
+        /**************************************************
+                Wake up main core :D
+        **************************************************/
+        // Init jump table provided by kernel and bios(ΦωΦ)
+        init_jmptab();
 
+        // Init task information (〃'▽'〃)
+        init_task_info();
+
+        // Init Process Control Blocks |•'-'•) ✧
+        init_pcb();
+        printk("> [INIT] PCB initialization succeeded.\n");
+
+        // Read CPU frequency (｡•ᴗ-)_
+        time_base = bios_read_fdt(TIMEBASE);
+
+        // Init lock mechanism o(´^｀)o
+        init_locks();
+        printk("> [INIT] Lock mechanism initialization succeeded.\n");
+
+        // Init Synchronization :D
+        init_semaphores();
+        init_barriers();
+        init_conditions();
+        init_mbox();
+        printk("> [INIT] Synchronization initialization succeeded.\n");
+
+        // Init interrupt (^_^)
+        init_exception();
+        printk("> [INIT] Interrupt processing initialization succeeded.\n");
+
+        // Init system call table (0_0)
+        init_syscall();
+        printk("> [INIT] System call initialized successfully.\n");
+
+        // [p3-multicore] init kernel_lock
+        smp_init();
+        printk("> [INIT] kernel_lock initialization succeeded.\n");
+
+        // Init screen (QAQ)
+        init_screen();
+        printk("> [INIT] SCREEN initialization succeeded.\n");
+
+        // TODO: [p2-task4] Setup timer interrupt and enable all interrupt globally
+        // NOTE: The function of sstatus.sie is different from sie's
+        bios_set_timer(get_ticks() + TIMER_INTERVAL);
+
+        printk("> [INIT] Main core initialization succeeded. :D\n");
+
+        // [p3-multicore] wakeup sub core :P
+        wakeup_other_hart();
+
+        // Infinite while loop, where CPU stays in a low-power state (QAQQQQQQQQQQQ)
+        while (1)
+        {
+            // If you do non-preemptive scheduling, it's used to surrender control
+            //do_scheduler();
+
+            // If you do preemptive scheduling, they're used to enable CSR_SIE and wfi
+            enable_preempt();
+            //wakeup_other_hart();
+            asm volatile("wfi");
+        }
+    }
     return 0;
 }

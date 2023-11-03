@@ -3,6 +3,7 @@
 #include <os/sched.h>
 #include <os/string.h>
 #include <os/kernel.h>
+#include <os/smp.h>
 #include <printk.h>
 #include <assert.h>
 #include <screen.h>
@@ -57,6 +58,9 @@ void init_exception()
 
 void handle_other(regs_context_t *regs, uint64_t stval, uint64_t scause)
 {
+    int cpuid = get_current_cpu_id();
+    printk("cpuid: %d\n", cpuid);
+
     char* reg_name[] = {
         "zero "," ra  "," sp  "," gp  "," tp  ",
         " t0  "," t1  "," t2  ","s0/fp"," s1  ",

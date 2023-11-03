@@ -2,6 +2,7 @@
 #include <os/sched.h>
 #include <os/list.h>
 #include <atomic.h>
+#include <os/smp.h>
 
 mutex_lock_t mlocks[LOCK_NUM];
 
@@ -116,10 +117,13 @@ retry:
 }
 
 void do_mlock_acquire_ptr(mutex_lock_t *mlock_ptr){
+    // [p3-multicore]
+    int cpuid = get_current_cpu_id();
+
     if (spin_lock_try_acquire(&(mlock_ptr->lock)) == LOCKED){
-        do_block(&(current_running->list), &(mlock_ptr->block_queue));
+        do_block(&(current_running[cpuid]->list), &(mlock_ptr->block_queue));
     }
     else{
-        mlock_ptr->pid = current_running->pid;
+        mlock_ptr->pid = current_running[cpuid]->pid;
     }
 }

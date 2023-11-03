@@ -1,4 +1,5 @@
 #include <os/sync.h>
+#include <os/smp.h>
 
 condition_t conds[CONDITION_NUM];
 
@@ -40,8 +41,11 @@ void do_condition_destroy(int cond_idx){
 
 /* [p3] ptr version */
 void do_cond_wait_ptr(condition_t *cond_ptr, mutex_lock_t *mlock_ptr){
+    // [p3-multicore]
+    int cpuid = get_current_cpu_id();
+
     do_mlock_release_ptr(mlock_ptr);
-    do_block(&(current_running->list), &(cond_ptr->wait_queue));
+    do_block(&(current_running[cpuid]->list), &(cond_ptr->wait_queue));
     do_mlock_acquire_ptr(mlock_ptr);
 }
 

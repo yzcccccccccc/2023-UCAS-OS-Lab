@@ -15,7 +15,7 @@ uint64_t load_task_img(char *taskname)
         //bios_putstr("****************************************\n\r");
         int task_size, task_offset;
         int st_sec_id, occ_sec_num;                 // start sector id and occupied sectors
-        unsigned task_addr = 0;
+        long task_addr = 0;
 
         for (int i = 0; i < task_num; i++){
             if (strcmp(taskname, tasks[i].task_name) == 0){
@@ -32,8 +32,8 @@ uint64_t load_task_img(char *taskname)
                 bios_sd_read(task_addr, occ_sec_num, st_sec_id);        // rough transporting!
 
                 char *app_ptr, *head_ptr;                                   // fine transporting!
-                head_ptr = task_addr;
-                app_ptr = task_addr + task_offset - st_sec_id * SECTOR_SIZE;
+                head_ptr = (char *)task_addr;
+                app_ptr = (char *)(task_addr + task_offset - st_sec_id * SECTOR_SIZE);
                 for (int j = 0; j < task_size; j++){
                     *head_ptr = *app_ptr;
                     head_ptr++;

@@ -90,6 +90,9 @@ typedef struct pcb
     /* process id */
     pid_t pid;
 
+    /* cpu id */
+    int cid;
+
     /* BLOCK | READY | RUNNING */
     task_status_t status;
 
@@ -119,12 +122,12 @@ extern list_head ready_queue;
 extern list_head sleep_queue;
 
 /* current running task PCB */
-extern pcb_t * volatile current_running;
-extern pid_t process_id;
+extern pcb_t * volatile current_running[2];
+extern pid_t process_id[2];
 
 extern pcb_t pcb[NUM_MAX_TASK];
-extern pcb_t pid0_pcb;
-extern const ptr_t pid0_stack;
+extern pcb_t pid0_core0_pcb, pid0_core1_pcb;
+extern const ptr_t pid0_core0_stack, pid0_core1_stack;
 
 extern void switch_to(pcb_t *prev, pcb_t *next);
 void do_scheduler(void);

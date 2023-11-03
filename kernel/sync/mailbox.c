@@ -1,3 +1,4 @@
+#include <os/smp.h>
 #include <os/sync.h>
 #include <os/string.h>
 
