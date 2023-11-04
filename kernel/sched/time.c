@@ -43,7 +43,7 @@ void check_sleeping(void)
         n_ptr = ptr->next;
         n_pcb = (pcb_t *)((void *)ptr - LIST_PCB_OFFSET);
         now_time = get_timer();
-        if (now_time >= n_pcb->wakeup_time){
+        if (now_time >= n_pcb->wakeup_time && n_pcb->status == TASK_BLOCKED){
             n_pcb->status = TASK_READY;
             list_delete(ptr);
             list_insert(&ready_queue, ptr);

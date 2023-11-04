@@ -42,6 +42,8 @@ int main()
     int64_t bytes = 0;
 
     sys_move_cursor(0, position);
+    printf("                                                  ");
+    sys_move_cursor(0, position);
     printf("[Client] server started");
     sys_sleep(1);
     for (;;)

@@ -5,6 +5,7 @@
 #include <os/kernel.h>
 
 spin_lock_t kernel_lock;
+int kernel_cpu_id = -1;
 
 void smp_init()
 {
@@ -23,10 +24,12 @@ void lock_kernel()
 {
     /* TODO: P3-TASK3 multicore*/
     spin_lock_acquire(&kernel_lock);
+    kernel_cpu_id = get_current_cpu_id();
 }
 
 void unlock_kernel()
 {
     /* TODO: P3-TASK3 multicore*/
     spin_lock_release(&kernel_lock);
+    kernel_cpu_id = -1;
 }

@@ -13,17 +13,17 @@
 
 pcb_t pcb[NUM_MAX_TASK];
 const ptr_t pid0_core0_stack = INIT_KERNEL_STACK + PAGE_SIZE;
-const ptr_t pid0_core1_stack = INIT_KERNEL_STACK + 2 * PAGE_SIZE;
+const ptr_t pid0_core1_stack = INIT_KERNEL_STACK + 3 * PAGE_SIZE;
 pcb_t pid0_core0_pcb = {
     .pid = 0,
-    .kernel_sp = (ptr_t)pid0_core0_stack,
+    .kernel_sp = (ptr_t)(pid0_core0_stack - PAGE_SIZE),
     .user_sp = (ptr_t)pid0_core0_stack,
     .cid = 0,
     .name = "init0"
 };
 pcb_t pid0_core1_pcb = {
     .pid = 0,
-    .kernel_sp = (ptr_t)pid0_core1_stack,
+    .kernel_sp = (ptr_t)(pid0_core1_stack - PAGE_SIZE),
     .user_sp = (ptr_t)pid0_core1_stack,
     .cid = 1,
     .name = "init1"
@@ -51,16 +51,18 @@ void do_scheduler(void)
     /************************************************************/
 
     // TODO: [p2-task1] Modify the current_running pointer.
-    if (list_empty(&ready_queue))
-        return;
+    list_node_t *next_node;
+    if (list_empty(&ready_queue)){
+        next_node = cpu_id ? &pid0_core1_pcb.list : &pid0_core0_pcb.list;
+    }
+    else {
+        next_node = list_pop(&ready_queue);
+    }    
     
-    list_node_t *next_node = list_pop(&ready_queue);
     pcb_t *prev = current_running[cpu_id];
     pcb_t *next = (pcb_t *)((void *)next_node - LIST_PCB_OFFSET);
 
-    //printk("Switch: [%d]%s -> [%d]%s\r\n", prev->pid, prev->name, next->pid, next->name);
-
-    if (prev->status == TASK_RUNNING){
+    if (prev->status == TASK_RUNNING && prev->pid != 0){
         prev->status = TASK_READY;
         list_insert(&ready_queue, &(prev->list));
     }

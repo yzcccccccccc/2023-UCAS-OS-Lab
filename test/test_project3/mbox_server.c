@@ -37,7 +37,8 @@ int main(int argc, char *argv[])
     int64_t blockedCount = 0;
     int clientPos = print_location + 1;
 
-
+    sys_move_cursor(0, print_location);
+    printf("                                                  ");
     sys_move_cursor(0, print_location);
     printf("[Server] server started");
     sys_sleep(1);
@@ -55,7 +56,7 @@ int main(int argc, char *argv[])
         }
 
         sys_move_cursor(0, print_location);
-        printf("[Server]: recved msg from %d (blocked: %ld, correctBytes: %ld, errorBytes: %ld)",
+        printf("[Server] recved msg from %d (blocked: %ld, correctBytes: %ld, errorBytes: %ld)",
               header.sender, blockedCount, correctRecvBytes, errorRecvBytes);
 
         if (clientInitReq(msgBuffer, header.length)) {
