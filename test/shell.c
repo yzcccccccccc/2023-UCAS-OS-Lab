@@ -104,6 +104,7 @@ void exec(){
         name_cur++;
         cur++;
     }
+    name[name_cur] = '\0';
 
     // get args !
     int arg_num = 0, tmp_cur = 0;
@@ -149,6 +150,64 @@ void kill(){
     }
 }
 
+void taskset(){
+    int buffer_len = strlen(buffer);
+    
+    // check for '-p'
+    int form, need_wait = 1;
+    if (buffer[8] == '-' && buffer[9] == 'p')           // has arg '-p'
+        form = 1;
+    else
+        form = 0;
+    if (buffer[buffer_len - 1] == '&'){
+        need_wait = 0;
+        buffer_len--;
+    }
+    int cur = form ? 11 : 8;
+
+    // get the mask
+    int mask = 0;
+    while (buffer[cur] != ' ' && cur < buffer_len){
+        mask = mask*10 + buffer[cur] - '0';
+        cur++;
+    }
+
+    // get the name or pid
+    cur++;
+    if (form == 1){     // pid
+        int pid = 0;
+        while (buffer[cur] != ' ' && cur < buffer_len){
+            pid = pid * 10 + buffer[cur] - '0';
+            cur++;
+        }
+        int rtval = sys_taskset(0, mask, pid);
+        if (rtval)
+            printf("[Info] bind pid = %d with mask 0x%x\n", pid, mask);
+        else{
+            printf("[Info] Fail to bind! Plz check the pid :(\n");
+        }
+    }
+    else{
+        char name[NAME_MAX_LEN];
+        int name_cur = 0;
+        while (buffer[cur] != ' ' && cur < buffer_len){
+            name[name_cur] = buffer[cur];
+            cur++;
+            name_cur++;
+        }
+        name[name_cur] = '\0';
+        int new_pid = sys_taskset(name, mask, 0);
+        if (new_pid){
+            printf("[Info] start %s with mask 0x%x\n", name, mask);
+            if (need_wait)
+                sys_waitpid(new_pid);
+        }
+        else{
+            printf("[Info] Fail to start and bind! Plz check the proc name :(\n");
+        }
+    }
+}
+
 int check_cmd(){
     int cmd_found = 0;
     if (!strcmp(buffer, "ps")){
@@ -159,7 +218,7 @@ int check_cmd(){
         clear();
         cmd_found = 1;
     }
-    char tmp[5];
+    char tmp[9];
     for (int i = 0; i < 4; i++) tmp[i] = buffer[i];
     if (!strcmp(tmp, "exec")){
         exec();
@@ -167,6 +226,12 @@ int check_cmd(){
     }
     if (!strcmp(tmp, "kill")){
         kill();
+        cmd_found = 1;
+    }
+
+    for (int i = 4; i < 7; i++) tmp[i] = buffer[i];
+    if (!strcmp(tmp, "taskset")){
+        taskset();
         cmd_found = 1;
     }
     return cmd_found;

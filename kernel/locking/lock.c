@@ -81,7 +81,7 @@ void lock_resource_release(pid_t pid){
         Hint:
             only handle the acquired locks.
             block_queue situation will be 
-        handled when release a mutex.
+        handled in do_kill()
     ******************************************/
     for (int i = 0; i < LOCK_NUM; i++){
         if (mlocks[i].pid == pid){

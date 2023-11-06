@@ -50,14 +50,24 @@ void init_pcb_stack(ptr_t kernel_stack, ptr_t user_stack, ptr_t entry_point, pcb
 
 pid_t init_pcb_vname(char *name, int argc, char *argv[]){
     int load_suc = 0;
-    for (int i = 0; i < task_num; i++){
-        if (strcmp(tasks[i].task_name, name))
-            continue;
+    pid_t alloc_pid = 0;
+
+    /* [p3] allocate a pcb block */
+    for (int i = 1; i < NUM_MAX_TASK; i++){
+        if (pcb[i].status == TASK_EXITED){
+            alloc_pid = i;
+            break;
+        }
+    }
+    if (!alloc_pid)
+        return 0;               // allocated fail.
+
+    ptr_t entry_point = (load_task_img(name));
+    if (entry_point){
         load_suc = 1;
-        ptr_t entry_point = (load_task_img(tasks[i].task_name));
         pid_n++;
 
-        pcb_t* pcb_new = pcb + pid_n;
+        pcb_t* pcb_new = pcb + alloc_pid;
         pcb_new->kernel_sp = allocKernelPage(1) + PAGE_SIZE;
         pcb_new->user_sp = allocUserPage(1) + PAGE_SIZE;
         pcb_new->pid = pid_n;
@@ -65,19 +75,19 @@ pid_t init_pcb_vname(char *name, int argc, char *argv[]){
         pcb_new->cursor_x = pcb_new->cursor_y = 0;
 
         // for thread
-        pcb_new->par = NULL;
         pcb_new->tid = pid_n;
         pcb_new->thread_type = MAIN_THREAD;
 
         // [p3] wait_list init
         pcb_new->wait_list.next = pcb_new->wait_list.prev = &(pcb_new->wait_list);
 
-        strcpy(pcb_new->name, tasks[i].task_name);
+        strcpy(pcb_new->name, name);
         list_insert(&ready_queue, &pcb_new->list);
 
         init_pcb_stack(pcb_new->kernel_sp, pcb_new->user_sp, entry_point, pcb_new, argc, argv);
-
-        break;
+    }
+    else {
+        load_suc = 0;
     }
     return pid_n * load_suc;
 }

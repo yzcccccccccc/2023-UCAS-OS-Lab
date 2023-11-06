@@ -65,4 +65,7 @@ int sys_mbox_send(int mbox_idx, void *msg, int msg_length);
 int sys_mbox_recv(int mbox_idx, void *msg, int msg_length);
 /************************************************************/
 
+/* [p3-task4] taskset */
+int sys_taskset(char *name, int mask, int pid);
+
 #endif

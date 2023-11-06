@@ -5,9 +5,9 @@
 #include <os/sched.h>
 
 #define TASK_MEM_BASE    0x52000000
-#define TASK_MAXNUM      20
+#define TASK_MAXNUM      32
 #define TASK_SIZE        0x10000
-#define TASK_NAME_LEN 32
+#define TASK_NAME_LEN    32
 
 
 #define SECTOR_SIZE 512

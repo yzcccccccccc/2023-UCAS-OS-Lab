@@ -90,8 +90,9 @@ typedef struct pcb
     /* process id */
     pid_t pid;
 
-    /* cpu id */
+    /* cpu id & mask*/
     int cid;
+    int mask;
 
     /* BLOCK | READY | RUNNING */
     task_status_t status;
@@ -108,9 +109,6 @@ typedef struct pcb
 
     /* name */
     char name[MAX_NAME_LEN];
-
-    /* Father PCB */
-    struct pcb *par;
 } pcb_t;
 
 extern int pid_n;

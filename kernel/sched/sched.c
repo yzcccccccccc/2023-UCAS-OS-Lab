@@ -19,6 +19,7 @@ pcb_t pid0_core0_pcb = {
     .kernel_sp = (ptr_t)(pid0_core0_stack - PAGE_SIZE),
     .user_sp = (ptr_t)pid0_core0_stack,
     .cid = 0,
+    .mask = 0x1,
     .name = "init0"
 };
 pcb_t pid0_core1_pcb = {
@@ -26,6 +27,7 @@ pcb_t pid0_core1_pcb = {
     .kernel_sp = (ptr_t)(pid0_core1_stack - PAGE_SIZE),
     .user_sp = (ptr_t)pid0_core1_stack,
     .cid = 1,
+    .mask = 0x2,
     .name = "init1"
 };
 
@@ -52,21 +54,27 @@ void do_scheduler(void)
 
     // TODO: [p2-task1] Modify the current_running pointer.
     list_node_t *next_node;
+retry:
     if (list_empty(&ready_queue)){
         next_node = cpu_id ? &pid0_core1_pcb.list : &pid0_core0_pcb.list;
     }
     else {
         next_node = list_pop(&ready_queue);
-    }    
+    }
     
     pcb_t *prev = current_running[cpu_id];
     pcb_t *next = (pcb_t *)((void *)next_node - LIST_PCB_OFFSET);
 
-    if (prev->status == TASK_RUNNING && prev->pid != 0){
+    if (prev->status == TASK_RUNNING){
         prev->status = TASK_READY;
         list_insert(&ready_queue, &(prev->list));
     }
 
+    if (!(next->mask & (1 << cpu_id))){                     // [p3-task4] run on correct cpu :D
+        list_insert(&ready_queue, &next->list);
+        goto retry;
+    }
+    
     next->status = TASK_RUNNING;
     next->cid = cpu_id;
     process_id[cpu_id] = next->pid;
@@ -136,16 +144,27 @@ int do_kill(pid_t pid){                                 /* Kill process of certa
 
             /* Release waiting list */
             list_node_t *ptr;
+            pcb_t *pcb_ptr;
             while (!list_empty(&(pcb[i].wait_list))){
                 ptr = list_pop(&(pcb[i].wait_list));
-                do_unblock(ptr);
+                pcb_ptr = (pcb_t *)((void *)ptr - LIST_PCB_OFFSET);
+                if (pcb_ptr->status == TASK_BLOCKED)
+                    do_unblock(ptr);
             }
 
             /* Release locks */
             lock_resource_release(pcb[i].pid);
 
-            if (pcb[i].status == TASK_READY)
-                list_delete(&(pcb[i].list));
+            /*************************************************
+                Hint:
+                the benefit of list_node_t: easy to be del :)
+                    mutex_block_que, sleep_que, pcb_wait_que,
+                cond_wait_que, sema_wait_que ...
+                    All can be released ! :D
+                (list_node_t only belongs to one of them.)
+            *************************************************/
+            list_delete(&(pcb[i].list)); 
+
             pcb[i].status = TASK_EXITED;
 
             if (pid == current_running[cpuid]->pid){               // suicide :(

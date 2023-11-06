@@ -112,14 +112,20 @@ static void init_task_info(void)
 
 /************************************************************/
 static void init_pcb(void)
-{
+{   
+    /* [p3] init pcb[i]'s status to be exited */
+    for (int i = 0; i < NUM_MAX_TASK; i++)
+        pcb[i].status = TASK_EXITED;
+
     /* TODO: [p2-task1] load needed tasks and init their corresponding PCB */
     char name[] = "shell";
     char *fake_argv[1];
     fake_argv[0] = (char *)(&name);
-    init_pcb_vname(name, 1, fake_argv);
+    int shell_pid = init_pcb_vname(name, 1, fake_argv);
+    pcb[shell_pid].mask = 0x3;                  // both core can exec
 
     /* TODO: [p2-task1] remember to initialize 'current_running' */
+    pid0_core0_pcb.status = TASK_RUNNING;
     current_running[0] = &pid0_core0_pcb;
     asm volatile ("mv tp, %0\n\t"
                 :
@@ -170,6 +176,8 @@ static void init_syscall(void)
     syscall[SYSCALL_MBOX_OPEN]          = (long (*)())do_mbox_open;
     syscall[SYSCALL_MBOX_RECV]          = (long (*)())do_mbox_recv;
     syscall[SYSCALL_MBOX_SEND]          = (long (*)())do_mbox_send;
+
+    syscall[SYSCALL_TASKSET]            = (long (*)())do_taskset;
 }
 /************************************************************/
 
@@ -184,6 +192,7 @@ int main(void)
         setup_exception();
         bios_set_timer(get_ticks() + TIMER_INTERVAL);
 
+        pid0_core1_pcb.status = TASK_RUNNING;
         current_running[1] = &pid0_core1_pcb;
         asm volatile ("mv tp, %0\n\t"
                 :

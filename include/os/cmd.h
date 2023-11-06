@@ -12,5 +12,6 @@
 void do_process_show();
 pid_t do_exec(char *name, int argc, char **argv);
 pid_t do_getpid();
+int do_taskset(char *name, int mask, int pid);
 
 #endif

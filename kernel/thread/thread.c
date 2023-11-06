@@ -48,7 +48,6 @@ pid_t thread_create(uint64_t entry_addr, uint64_t arg){
     pcb_new->pid = pid_n;
     pcb_new->status = TASK_READY;
     pcb_new->cursor_x = pcb_new->cursor_y = 0;
-    pcb_new->par = current_running[cpuid];
     pcb_new->tid = current_running[cpuid]->pid;
     pcb_new->thread_type = SUB_THREAD;
     strcpy(pcb_new->name, "thread-sub");
