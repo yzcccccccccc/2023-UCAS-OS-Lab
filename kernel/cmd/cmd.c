@@ -50,10 +50,7 @@ void do_process_show(){
 }
 
 pid_t do_exec(char *name, int argc, char *argv[]){
-    int cpuid = get_current_cpu_id();
     pid_t pid = init_pcb_vname(name, argc, argv);
-    if (pid != 0)
-        pcb[pid].mask = current_running[cpuid]->mask;
     return pid;
 }
 
@@ -65,20 +62,23 @@ pid_t do_getpid(){
 }
 
 int do_taskset(char *name, int mask, int pid){
-    int rtval;
+    int rtval = 0;
     if (name == NULL){              // has arg '-p'
-        if (pid > 0 && pid <= pid_n){
-            pcb[pid].mask = mask;
-            rtval = 1;
-        }
-        else {
-            rtval = 0;
-        }
+        for (int i = 0; i < NUM_MAX_TASK; i++)
+            if (pcb[i].pid == pid){
+                pcb[i].mask = mask;
+                rtval = 1;
+                break;
+            }
     }
     else{
         char *argv[1] = {name};
         int new_pid = init_pcb_vname(name, 1, argv);
-        pcb[new_pid].mask = mask;
+        for (int i = 0; i < NUM_MAX_TASK; i++)
+            if (pcb[i].pid == new_pid){
+                pcb[i].mask = mask;
+                break;
+            }
         rtval = new_pid;
     }
     return rtval;

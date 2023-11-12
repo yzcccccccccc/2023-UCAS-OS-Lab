@@ -2,6 +2,7 @@
 #include <os/loader.h>
 #include <os/string.h>
 #include <os/mm.h>
+#include <os/smp.h>
 #include <csr.h>
 
 extern void ret_from_exception();
@@ -50,16 +51,17 @@ void init_pcb_stack(ptr_t kernel_stack, ptr_t user_stack, ptr_t entry_point, pcb
 
 pid_t init_pcb_vname(char *name, int argc, char *argv[]){
     int load_suc = 0;
-    pid_t alloc_pid = 0;
+    pid_t alloc_pcb_idx = 0;
+    int cpuid = get_current_cpu_id();
 
     /* [p3] allocate a pcb block */
     for (int i = 1; i < NUM_MAX_TASK; i++){
-        if (pcb[i].status == TASK_EXITED){
-            alloc_pid = i;
+        if (pcb[i].status == TASK_EXITED || pcb[i].status == TASK_UNUSED){
+            alloc_pcb_idx = i;
             break;
         }
     }
-    if (!alloc_pid)
+    if (!alloc_pcb_idx)
         return 0;               // allocated fail.
 
     ptr_t entry_point = (load_task_img(name));
@@ -67,9 +69,18 @@ pid_t init_pcb_vname(char *name, int argc, char *argv[]){
         load_suc = 1;
         pid_n++;
 
-        pcb_t* pcb_new = pcb + alloc_pid;
-        pcb_new->kernel_sp = allocKernelPage(1) + PAGE_SIZE;
-        pcb_new->user_sp = allocUserPage(1) + PAGE_SIZE;
+        pcb_t* pcb_new = pcb + alloc_pcb_idx;
+        if (pcb_new->status == TASK_UNUSED){
+            pcb_new->kernel_sp  = allocKernelPage(1) + PAGE_SIZE;
+            pcb_new->user_sp    = allocUserPage(1) + PAGE_SIZE;
+            pcb_new->kernel_stack_base  = pcb_new->kernel_sp;
+            pcb_new->user_stack_base    = pcb_new->user_sp;
+        }
+        else{
+            pcb_new->kernel_sp  = pcb_new->kernel_stack_base;
+            pcb_new->user_sp    = pcb_new->user_stack_base;
+        }
+       
         pcb_new->pid = pid_n;
         pcb_new->status = TASK_READY;
         pcb_new->cursor_x = pcb_new->cursor_y = 0;
@@ -80,6 +91,12 @@ pid_t init_pcb_vname(char *name, int argc, char *argv[]){
 
         // [p3] wait_list init
         pcb_new->wait_list.next = pcb_new->wait_list.prev = &(pcb_new->wait_list);
+
+        // [p3] CPU mask
+        if (current_running[cpuid] == NULL)
+            pcb_new->mask = 0x3;                            // both cores can execute
+        else
+            pcb_new->mask = current_running[cpuid]->mask;   // inherit
 
         strcpy(pcb_new->name, name);
         list_insert(&ready_queue, &pcb_new->list);

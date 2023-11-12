@@ -69,7 +69,7 @@ static inline void list_insert(list_node_t *list_head_ptr, list_node_t *list_nod
 
 // delete *ptr node
 static inline void list_delete(list_node_t *ptr){
-    if (list_empty(ptr))
+    if (ptr->next == NULL || ptr->prev == NULL)
         return;
     ptr->prev->next = ptr->next;
     ptr->next->prev = ptr->prev;

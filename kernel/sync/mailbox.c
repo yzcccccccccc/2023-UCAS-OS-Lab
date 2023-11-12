@@ -56,9 +56,12 @@ void do_mbox_close(int mbox_idx){
 
 // Producer
 int do_mbox_send(int mbox_idx, void *msg, int msg_length){
+    int block_time = 0;
     do_mlock_acquire_ptr(&mbox[mbox_idx].mlock);
-    while (mbox[mbox_idx].freespace < msg_length)
+    while (mbox[mbox_idx].freespace < msg_length){
+        block_time++;
         do_cond_wait_ptr(&mbox[mbox_idx].is_full, &mbox[mbox_idx].mlock);
+    }
     for (int i = 0; i < msg_length; i++){
         mbox[mbox_idx].msg[mbox[mbox_idx].tail] = ((char *)msg)[i];
         mbox[mbox_idx].tail = (mbox[mbox_idx].tail + 1) % MAX_MBOX_LENGTH;
@@ -66,14 +69,17 @@ int do_mbox_send(int mbox_idx, void *msg, int msg_length){
     mbox[mbox_idx].freespace -= msg_length;
     do_cond_signal_ptr(&mbox[mbox_idx].is_empty);
     do_mlock_release_ptr(&mbox[mbox_idx].mlock);
-    return 1;
+    return block_time;
 }
 
 // Consumer
 int do_mbox_recv(int mbox_idx, void *msg, int msg_length){
+    int block_time = 0;
     do_mlock_acquire_ptr(&mbox[mbox_idx].mlock);
-    while (MAX_MBOX_LENGTH - mbox[mbox_idx].freespace < msg_length)
+    while (MAX_MBOX_LENGTH - mbox[mbox_idx].freespace < msg_length){
+        block_time++;
         do_cond_wait_ptr(&mbox[mbox_idx].is_empty, &mbox[mbox_idx].mlock);
+    }
     for (int i = 0; i < msg_length; i++){
         ((char *)msg)[i] = mbox[mbox_idx].msg[mbox[mbox_idx].head];
         mbox[mbox_idx].head = (mbox[mbox_idx].head + 1) % MAX_MBOX_LENGTH;
@@ -81,5 +87,5 @@ int do_mbox_recv(int mbox_idx, void *msg, int msg_length){
     mbox[mbox_idx].freespace += msg_length;
     do_cond_signal_ptr(&mbox[mbox_idx].is_full);
     do_mlock_release_ptr(&mbox[mbox_idx].mlock);
-    return 1;
+    return block_time;
 }

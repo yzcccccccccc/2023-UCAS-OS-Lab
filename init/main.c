@@ -115,7 +115,7 @@ static void init_pcb(void)
 {   
     /* [p3] init pcb[i]'s status to be exited */
     for (int i = 0; i < NUM_MAX_TASK; i++)
-        pcb[i].status = TASK_EXITED;
+        pcb[i].status = TASK_UNUSED;
 
     /* TODO: [p2-task1] load needed tasks and init their corresponding PCB */
     char name[] = "shell";

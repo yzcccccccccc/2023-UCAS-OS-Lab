@@ -57,6 +57,7 @@ typedef struct switchto_context
 } switchto_context_t;
 
 typedef enum {
+    TASK_UNUSED,
     TASK_BLOCKED,
     TASK_RUNNING,
     TASK_READY,

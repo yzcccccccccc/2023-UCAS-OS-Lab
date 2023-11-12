@@ -53,26 +53,30 @@ void do_scheduler(void)
     /************************************************************/
 
     // TODO: [p2-task1] Modify the current_running pointer.
-    list_node_t *next_node;
-retry:
-    if (list_empty(&ready_queue)){
-        next_node = cpu_id ? &pid0_core1_pcb.list : &pid0_core0_pcb.list;
+    list_node_t *ptr = (&ready_queue)->next;
+    pcb_t *next;
+
+    // [p3] Look through the ready_queue
+    for (;ptr != &ready_queue; ptr = ptr->next){
+        next = (pcb_t *)((void *)ptr - LIST_PCB_OFFSET);
+        if ((next->mask & (1 << cpu_id))){     // [p3-task4] run on correct cpu :P
+            break;
+        }
     }
-    else {
-        next_node = list_pop(&ready_queue);
+
+    if (ptr == &ready_queue){           // no available pcb. :(
+        ptr = cpu_id ? &pid0_core1_pcb.list : &pid0_core0_pcb.list;
+        next = (pcb_t *)((void *)ptr - LIST_PCB_OFFSET);
     }
+    else
+        list_delete(ptr);               // remove from ready_queu :D
     
     pcb_t *prev = current_running[cpu_id];
-    pcb_t *next = (pcb_t *)((void *)next_node - LIST_PCB_OFFSET);
 
     if (prev->status == TASK_RUNNING){
         prev->status = TASK_READY;
-        list_insert(&ready_queue, &(prev->list));
-    }
-
-    if (!(next->mask & (1 << cpu_id))){                     // [p3-task4] run on correct cpu :D
-        list_insert(&ready_queue, &next->list);
-        goto retry;
+        if (prev != &pid0_core0_pcb && prev != &pid0_core1_pcb)
+            list_insert(&ready_queue, &(prev->list));
     }
     
     next->status = TASK_RUNNING;
