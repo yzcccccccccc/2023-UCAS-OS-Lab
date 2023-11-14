@@ -262,3 +262,14 @@ int sys_mbox_recv(int mbox_idx, void *msg, int msg_length)
 int sys_taskset(char *name, int mask, int pid){
     return invoke_syscall(SYSCALL_TASKSET, (long)name, (long)mask, (long)pid, 0, 0);
 }
+
+void* sys_shmpageget(int key)
+{
+    /* TODO: [p4-task4] call invoke_syscall to implement sys_shmpageget */
+}
+
+void sys_shmpagedt(void *addr)
+{
+    /* TODO: [p4-task4] call invoke_syscall to implement sys_shmpagedt */
+}
+/************************************************************/
