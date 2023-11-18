@@ -142,7 +142,7 @@ int do_kill(pid_t pid){                                 /* Kill process of certa
     // [p3-multicore]
     int cpuid = get_current_cpu_id();
     int suc = 0;
-    for (int i = 1; i <= pid_n; i++){
+    for (int i = 1; i < TASK_MAXNUM; i++){
         if (pcb[i].pid == pid && pcb[i].status != TASK_EXITED){
             suc = 1;
 
