@@ -71,8 +71,8 @@ pid_t init_pcb_vname(char *name, int argc, char *argv[]){
 
         pcb_t* pcb_new = pcb + alloc_pcb_idx;
         if (pcb_new->status == TASK_UNUSED){
-            pcb_new->kernel_sp  = allocKernelPage(1) + PAGE_SIZE;
-            pcb_new->user_sp    = allocUserPage(1) + PAGE_SIZE;
+            //pcb_new->kernel_sp  = allocKernelPage(1) + PAGE_SIZE;
+            //pcb_new->user_sp    = allocUserPage(1) + PAGE_SIZE;
             pcb_new->kernel_stack_base  = pcb_new->kernel_sp;
             pcb_new->user_stack_base    = pcb_new->user_sp;
         }

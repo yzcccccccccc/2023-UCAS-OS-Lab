@@ -13,16 +13,20 @@ void init_barriers(){
 }
 
 int do_barrier_init(int key, int goal){
-    int bar_idx = -1;
+    // query
+    for (int i = 0; i < BARRIER_NUM; i++)
+        if (barrs[i].key == key){
+            return i;
+        }
+    // create
     for (int i = 0; i < BARRIER_NUM; i++){
         if (barrs[i].key == -1){
-            bar_idx = i;
             barrs[i].goal = goal;
             barrs[i].key = key;
-            break;
+            return i;
         }
     }
-    return bar_idx;
+    return -1;
 }
 
 void do_barrier_wait(int bar_idx){

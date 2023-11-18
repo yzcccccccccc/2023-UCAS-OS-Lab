@@ -43,8 +43,8 @@ pid_t thread_create(uint64_t entry_addr, uint64_t arg){
         return -1;                      // create fail.
     pid_n++;
     pcb_t* pcb_new = pcb + pid_n;
-    pcb_new->kernel_sp = allocKernelPage(1) + PAGE_SIZE;
-    pcb_new->user_sp = allocUserPage(1) + PAGE_SIZE;
+    //pcb_new->kernel_sp = allocKernelPage(1) + PAGE_SIZE;
+    //pcb_new->user_sp = allocUserPage(1) + PAGE_SIZE;
     pcb_new->pid = pid_n;
     pcb_new->status = TASK_READY;
     pcb_new->cursor_x = pcb_new->cursor_y = 0;

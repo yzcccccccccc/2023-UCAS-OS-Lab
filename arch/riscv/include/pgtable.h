@@ -76,42 +76,58 @@ typedef uint64_t PTE;
 static inline uintptr_t kva2pa(uintptr_t kva)
 {
     /* TODO: [P4-task1] */
+    return kva - 0xffffffc000000000lu;
 }
 
 static inline uintptr_t pa2kva(uintptr_t pa)
 {
     /* TODO: [P4-task1] */
+    return pa + 0xffffffc000000000lu;
 }
 
 /* get physical page addr from PTE 'entry' */
 static inline uint64_t get_pa(PTE entry)
 {
     /* TODO: [P4-task1] */
+    return (entry >> _PAGE_PFN_SHIFT) << NORMAL_PAGE_SHIFT;
 }
 
 /* Get/Set page frame number of the `entry` */
 static inline long get_pfn(PTE entry)
 {
     /* TODO: [P4-task1] */
+    return entry >> _PAGE_PFN_SHIFT;
 }
 static inline void set_pfn(PTE *entry, uint64_t pfn)
 {
     /* TODO: [P4-task1] */
+    *entry = ((*entry) & ((1lu << _PAGE_PFN_SHIFT) - 1))                // protect attributes bits and clear PFN bits in entry
+            | (pfn << _PAGE_PFN_SHIFT);                                 // set PFN bits in entry
 }
 
 /* Get/Set attribute(s) of the `entry` */
 static inline long get_attribute(PTE entry, uint64_t mask)
 {
     /* TODO: [P4-task1] */
+    return entry & 0xfflu & mask;
 }
 static inline void set_attribute(PTE *entry, uint64_t bits)
 {
     /* TODO: [P4-task1] */
+    *entry = ((*entry) & (~0xfflu))         // protect PFN bits and clear attributes bits
+            | bits;                         // set attributes bits
 }
 
+// [p4-task1] this func is for setting the pgtab mapped memory cells to zero.
 static inline void clear_pgdir(uintptr_t pgdir_addr)
 {
     /* TODO: [P4-task1] */
+    int step    = sizeof(int);
+    int ite     = NORMAL_PAGE_SIZE / step;
+    for (int i = 0; i < ite; i++){
+        *((int *)pgdir_addr) = 0;
+        pgdir_addr += step;
+    }
 }
 
 #endif  // PGTABLE_H

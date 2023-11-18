@@ -12,38 +12,31 @@ uint64_t load_task_img(char *taskname)
      */
 
     /* [p1-task4] load via task name */
-        //bios_putstr("****************************************\n\r");
-        int task_size, task_offset;
-        int st_sec_id, occ_sec_num;                 // start sector id and occupied sectors
-        long task_addr = 0;
+    int task_size, task_offset;
+    int st_sec_id, occ_sec_num;                 // start sector id and occupied sectors
+    long task_addr = 0;
 
-        for (int i = 0; i < task_num; i++){
-            if (strcmp(taskname, tasks[i].task_name) == 0){
-                //bios_putstr("Task check-in: [");
-                //bios_putstr(taskname);
-                //bios_putstr("], transporting to memory ...\n\r");
+    for (int i = 0; i < task_num; i++){
+        if (strcmp(taskname, tasks[i].task_name) == 0){
+            task_size = tasks[i].size;
+            task_offset = tasks[i].offset;
+            st_sec_id = task_offset / SECTOR_SIZE;
+            occ_sec_num = NBYTES2SEC(task_offset + task_size) - st_sec_id;
+            task_addr = TASK_MEM_BASE + i * TASK_SIZE;
 
-                task_size = tasks[i].size;
-                task_offset = tasks[i].offset;
-                st_sec_id = task_offset / SECTOR_SIZE;
-                occ_sec_num = NBYTES2SEC(task_offset + task_size) - st_sec_id;
-                task_addr = TASK_MEM_BASE + i * TASK_SIZE;
+            bios_sd_read(task_addr, occ_sec_num, st_sec_id);        // rough transporting!
 
-                bios_sd_read(task_addr, occ_sec_num, st_sec_id);        // rough transporting!
-
-                char *app_ptr, *head_ptr;                                   // fine transporting!
-                head_ptr = (char *)task_addr;
-                app_ptr = (char *)(task_addr + task_offset - st_sec_id * SECTOR_SIZE);
-                for (int j = 0; j < task_size; j++){
-                    *head_ptr = *app_ptr;
-                    head_ptr++;
-                    app_ptr++;
-                }
-                
-                //bios_putstr("Loading Task Complete.\n\r");
-                //bios_putstr("****************************************\n\r");
-                break;
+            char *app_ptr, *head_ptr;                                   // fine transporting!
+            head_ptr = (char *)task_addr;
+            app_ptr = (char *)(task_addr + task_offset - st_sec_id * SECTOR_SIZE);
+            for (int j = 0; j < task_size; j++){
+                *head_ptr = *app_ptr;
+                head_ptr++;
+                app_ptr++;
             }
+                
+            break;
         }
-        return task_addr;
+    }
+    return task_addr;
 }

@@ -6,7 +6,7 @@
 #include <asm.h>
 #include <csr.h>
 
-#define KERNEL_STACK		0x50500000
+#define KERNEL_STACK		0xffffffc052001000
 #define PAGE_SIZE       4096
 
 .section ".entry_function","ax"
@@ -30,12 +30,12 @@ Loop:
 EOLoop:
 
   /* TODO: [p1-task2] setup C environment */
-  la    sp, KERNEL_STACK          # set stack-pointer to KERNEL_STACK
+  li    sp, KERNEL_STACK          # set stack-pointer to KERNEL_STACK
   j     main
 
 secondary:
-  la    sp, KERNEL_STACK
-  la    t0, PAGE_SIZE
+  li    sp, KERNEL_STACK
+  li    t0, PAGE_SIZE
   add   sp, sp, t0
   j     main
 

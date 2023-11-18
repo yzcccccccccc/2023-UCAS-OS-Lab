@@ -10,7 +10,7 @@ typedef void (*kernel_entry_t)(unsigned long);
 static uintptr_t ARRTIBUTE_BOOTKERNEL alloc_page()
 {
     static uintptr_t pg_base = PGDIR_PA;
-    pg_base += 0x1000;
+    pg_base += 0x1000;                              // 4KB
     return pg_base;
 }
 
@@ -53,16 +53,16 @@ static void ARRTIBUTE_BOOTKERNEL setup_vm()
     // address(kpa) kva = kpa + 0xffff_ffc0_0000_0000 use 2MB page,
     // map all physical memory
     PTE *early_pgdir = (PTE *)PGDIR_PA;
-    for (uint64_t kva = 0xffffffc050000000lu;
+    for (uint64_t kva = 0xffffffc050000000lu;                   // 128 * 2MB, Actuallly 0x50000000 ~ 0x60000000 is the entire physical memory space?
          kva < 0xffffffc060000000lu; kva += 0x200000lu) {
         map_page(kva, kva2pa(kva), early_pgdir);
     }
     // map boot address
-    for (uint64_t pa = 0x50000000lu; pa < 0x51000000lu;
+    for (uint64_t pa = 0x50000000lu; pa < 0x51000000lu;         // 128 * 2MB
          pa += 0x200000lu) {
         map_page(pa, pa, early_pgdir);
     }
-    enable_vm();
+    enable_vm();                                                // after this, we begin to use vm
 }
 
 extern uintptr_t _start[];
@@ -77,7 +77,7 @@ int ARRTIBUTE_BOOTKERNEL boot_kernel(unsigned long mhartid)
     }
 
     /* enter kernel */
-    ((kernel_entry_t)pa2kva(_start))(mhartid);
+    ((kernel_entry_t)pa2kva((uintptr_t)_start))(mhartid);
 
     return 0;
 }

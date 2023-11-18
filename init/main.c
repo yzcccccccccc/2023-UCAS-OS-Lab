@@ -21,8 +21,8 @@
 #include <type.h>
 #include <csr.h>
 
-
 extern void ret_from_exception();
+spin_lock_t unmap_sync_lock;
 
 // Task info array
 task_info_t tasks[TASK_MAXNUM];
@@ -77,13 +77,14 @@ static void init_task_info(void)
 {
     // TODO: [p1-task4] Init 'tasks' array via reading app-info sector
     // NOTE: You need to get some related arguments from bootblock first
-    ptr_t info_ptr = 0x502001f8;
-    ptr_t tmp_app_info_addr = 0x52000000;
+    task_info_t tasks_tmp[TASK_MAXNUM];
+    ptr_t info_ptr = 0x502001f8;                            // [p4] Physical Addr
+    ptr_t tmp_app_info_addr = (ptr_t)tasks_tmp;             // [p4] Virtual Addr
 
     // loading task num and kernel size
-    app_info_offset = *((int *)info_ptr);
-    os_size = *((short *)(info_ptr + 4));
-    task_num = *((short *)(info_ptr + 6));
+    app_info_offset = *((int *)pa2kva(info_ptr));
+    os_size = *((short *)pa2kva(info_ptr + 4));
+    task_num = *((short *)pa2kva(info_ptr + 6));
 
     bios_putstr("=======================================================================\n\r");
     bios_putstr("\tTask Num: ");
@@ -104,7 +105,7 @@ static void init_task_info(void)
     int task_info_size = task_num * sizeof(task_info_t);
     int task_info_sec_id = app_info_offset / SECTOR_SIZE;
     int task_info_sec_num = NBYTES2SEC(app_info_offset + task_info_size) - task_info_sec_id;
-    bios_sd_read(tmp_app_info_addr, task_info_sec_num, task_info_sec_id);
+    bios_sd_read(kva2pa(tmp_app_info_addr), task_info_sec_num, task_info_sec_id);
 
     task_info_ptr = (task_info_t *)(tmp_app_info_addr + app_info_offset - SECTOR_SIZE * task_info_sec_id);
     memcpy((uint8_t *)tasks, (uint8_t *)task_info_ptr, task_num * sizeof(task_info_t));
@@ -200,6 +201,10 @@ int main(void)
                 :"tp"
                 );
 
+        // [p4-task1] unmap!
+        unmap();
+        spin_lock_release(&unmap_sync_lock);
+
         printk("> [INIT] Sub core initialization succeeded. :D\n");
 
         unlock_kernel();
@@ -266,15 +271,16 @@ int main(void)
         // [p3-multicore] wakeup sub core :P
         wakeup_other_hart();
 
+        // [p4-unmap] cancel the map of 0x50200000 ~ 0x51000000, done by sub-core
+        spin_lock_init(&unmap_sync_lock);
+        spin_lock_try_acquire(&unmap_sync_lock);            // lock, wait core1 unlock it
+        spin_lock_acquire(&unmap_sync_lock);
+
         // Infinite while loop, where CPU stays in a low-power state (QAQQQQQQQQQQQ)
         while (1)
         {
-            // If you do non-preemptive scheduling, it's used to surrender control
-            //do_scheduler();
-
             // If you do preemptive scheduling, they're used to enable CSR_SIE and wfi
             enable_preempt();
-            //wakeup_other_hart();
             asm volatile("wfi");
         }
     }
