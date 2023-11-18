@@ -30,7 +30,7 @@ task_info_t tasks[TASK_MAXNUM];
 short task_num, os_size;
 int app_info_offset;
 
-int pid_n;
+int pid_n = 0;
 
 static void init_jmptab(void)
 {
@@ -115,7 +115,7 @@ static void init_task_info(void)
 static void init_pcb(void)
 {   
     /* [p3] init pcb[i]'s status to be exited */
-    for (int i = 0; i < NUM_MAX_TASK; i++)
+    for (int i = 0; i < TASK_MAXNUM; i++)
         pcb[i].status = TASK_UNUSED;
 
     /* TODO: [p2-task1] load needed tasks and init their corresponding PCB */

@@ -20,7 +20,7 @@ void do_process_show(){
     printk("       MASK\n");
 
     /* Table Body */
-    for (int i = 1, len; i <= pid_n; i++){
+    for (int i = 1, len; i < TASK_MAXNUM; i++){
         if (pcb[i].pid == 0)
             continue;
         printk("%03d", pcb[i].pid);
