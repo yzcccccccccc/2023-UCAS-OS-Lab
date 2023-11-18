@@ -188,7 +188,7 @@ int do_waitpid(pid_t pid){
     // [p3-multicore]
     int cpuid = get_current_cpu_id();
     pid_t rtval = 0;
-    for (int i = 1; i <= pid_n; i++){
+    for (int i = 1; i < TASK_MAXNUM; i++){
         if (pcb[i].pid == pid){
             rtval = pid;
             if (pcb[i].status != TASK_EXITED)

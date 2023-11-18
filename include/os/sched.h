@@ -32,7 +32,7 @@
 #include <type.h>
 #include <os/list.h>
 
-#define NUM_MAX_TASK 32
+#define NUM_MAX_TASK 16
 
 #define MAX_NAME_LEN 32
 
