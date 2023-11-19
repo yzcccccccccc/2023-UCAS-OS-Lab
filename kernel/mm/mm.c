@@ -62,7 +62,7 @@ uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir)
                     (vpn1 << PPN_BITS) ^
                     (va >> (NORMAL_PAGE_SHIFT));
 
-    // aloc PTE
+    //--------------------------------aloc PTE--------------------------------
     PTE *pmd2 = (PTE *)pgdir;
     if (!(pmd2[vpn2] & _PAGE_PRESENT)){
         // alloc a new page

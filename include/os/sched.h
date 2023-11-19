@@ -110,6 +110,9 @@ typedef struct pcb
 
     /* name */
     char name[MAX_NAME_LEN];
+
+    /* [p4] page dir */
+    uintptr_t pgdir;                // pgdir, saved as kva
 } pcb_t;
 
 extern int pid_n;
