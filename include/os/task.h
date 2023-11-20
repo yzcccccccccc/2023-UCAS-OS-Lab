@@ -16,8 +16,9 @@
 /* TODO: [p1-task4] implement your own task_info_t! */
 typedef struct {
     char task_name[TASK_NAME_LEN];
-    int offset;                                 // offset from bootblock (addr: 0)
+    int offset;       // offset from bootblock (addr: 0)
     int size;
+    uint64_t p_vaddr, p_filesz, p_memsz, p_flags;
 } task_info_t;
 
 extern task_info_t tasks[TASK_MAXNUM];

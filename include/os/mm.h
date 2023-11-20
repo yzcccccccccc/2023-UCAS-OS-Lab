@@ -43,20 +43,27 @@
 #define ROUNDDOWN(a, n) (((uint64_t)(a)) & ~((n)-1))
 
 /* [p4] page-frame management */
-#define NUM_MAX_PGFRAME 200
-#define LIST_PGF_OFFSET 16
+#define NUM_MAX_PGFRAME     200
+#define LIST_PGF_OFFSET     16
+#define PCBLIST_PGF_OFFSET  32
+
+typedef enum{
+    UNPINNED,
+    PINNED
+}pf_type_t;
 
 typedef struct pgf{
-    uint64_t    kva;
-    uint64_t    va;
+    uint64_t    kva;                            // to some degrees, it's the physical frame
+    uint64_t    va;                             // virtual frame
     list_node_t list;
-    pid_t       user;
-    pcb_t       *user_pcb;
+    list_node_t pcb_list;                       // pcb_list is used for the frame list in every pcb (may be of use when recycling)
+    pid_t       user_pid;
 }pgf_t;
 extern pgf_t pf[NUM_MAX_PGFRAME];
-extern list_head free_pf, used_pf;
+extern list_head free_pf, pinned_used_pf, unpinned_used_pf;
 
 extern ptr_t allocPage(int numPage);
+extern ptr_t allocPage_from_freePF(int type, pcb_t *pcb_ptr, uint64_t va);
 extern void init_page();
 
 // TODO [P4-task1] */
@@ -76,8 +83,8 @@ extern ptr_t allocLargePage(int numPage);
 // TODO [P4-task1] */
 extern void* kmalloc(size_t size);
 extern void share_pgtable(uintptr_t dest_pgdir, uintptr_t src_pgdir);
-extern uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir);
-extern void unmap();
+extern uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, pcb_t *pcb_ptr);
+extern void unmap_boot();
 
 // TODO [P4-task4]: shm_page_get/dt */
 uintptr_t shm_page_get(int key);

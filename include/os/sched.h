@@ -83,7 +83,9 @@ typedef struct pcb
 
     /* previous, next pointer */
     list_node_t list;
-    list_head wait_list;
+
+    list_head wait_list;    // waitpid
+    list_head pf_list;      // allocated pageframes
 
     /* Thread id */         // <- mark as the 'thread group'
     pid_t tid;

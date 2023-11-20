@@ -130,4 +130,10 @@ static inline void clear_pgdir(uintptr_t pgdir_addr)
     }
 }
 
+// [p4] get the virtual frame of certain va (maybe 4KB alignment?)
+static inline uint64_t get_vf(uint64_t va){
+    // just clear the offset bits....
+    return ((va & VA_MASK) >> NORMAL_PAGE_SHIFT) << NORMAL_PAGE_SHIFT;
+}
+
 #endif  // PGTABLE_H

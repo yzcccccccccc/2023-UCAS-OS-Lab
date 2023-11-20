@@ -24,6 +24,7 @@ typedef struct {
     char task_name[TASK_NAME_LEN];
     int offset;                                 // offset from bootblock (addr: 0)
     int size;
+    long p_vaddr, p_filesz, p_memsz, p_flags;
 } task_info_t;
 
 #define TASK_MAXNUM 16
@@ -135,6 +136,14 @@ static void create_image(int nfiles, char *files[])
             /* [p1-task4] calculating app size */
             if (strcmp(*files, "main") && strcmp(*files, "bootblock"))
                 cur_size += get_filesz(phdr);
+
+            /* [p4] */
+            if (phdr.p_memsz != 0 && phdr.p_type == PT_LOAD && taskidx >= 0){
+                taskinfo[taskidx].p_filesz  = get_filesz(phdr);
+                taskinfo[taskidx].p_memsz   = get_memsz(phdr);
+                taskinfo[taskidx].p_flags   = phdr.p_flags;
+                taskinfo[taskidx].p_vaddr   = phdr.p_vaddr;
+            }
         }
 
         /* write padding bytes */
@@ -147,32 +156,30 @@ static void create_image(int nfiles, char *files[])
         if (strcmp(*files, "bootblock") == 0) {
             write_padding(img, &phyaddr, SECTOR_SIZE);
         }
-        /* [p1-task3] padding.
-            else{
-                // [p1-task3] padding to 15 sectors (both kernel and apps)
-                write_padding(img, &phyaddr, (15 * fidx + 1) * SECTOR_SIZE);
-            }
-        */
 
         /* [p1-task4] updating task_info */
         if (strcmp(*files, "main") && strcmp(*files, "bootblock")){
-            printf("===========================================================\n");
+            printf("===================================================================\n");
             printf("* Adding task:\n");
             taskinfo[taskidx].size = cur_size;
             memcpy(taskinfo[taskidx].task_name, *files, strlen(*files));
-            printf("* task name: %s\n", taskinfo[taskidx].task_name);
-            printf("* task offset: %d\n", taskinfo[taskidx].offset);
-            printf("* task size: %d\n", taskinfo[taskidx].size);
-            printf("* task id: %d\n", taskidx);
-            printf("===========================================================\n");
+            printf("* task name:        %s\n", taskinfo[taskidx].task_name);
+            printf("* task offset:      %d\n", taskinfo[taskidx].offset);
+            printf("* task size:        0x%x\n", taskinfo[taskidx].size);
+            printf("* task p_filesz:    0x%lx\n", taskinfo[taskidx].p_filesz);
+            printf("* task p_flags:     0x%lx\n", taskinfo[taskidx].p_flags);
+            printf("* task p_memsz:     0x%lx\n", taskinfo[taskidx].p_memsz);
+            printf("* task p_vaddr      0x%lx\n", taskinfo[taskidx].p_vaddr);
+            printf("* task id:          %d\n", taskidx);
+            printf("===================================================================\n");
         }
 
         if (strcmp(*files, "main") == 0){
             app_info_bytes = tasknum * sizeof(task_info_t);
             app_info_offset = phyaddr;
+            write_padding(img, &phyaddr, phyaddr + app_info_bytes);
             printf("****************** APP Info bytes: %d \n", app_info_bytes);
             printf("****************** APP Info offset: %d\n", app_info_offset);
-            write_padding(img, &phyaddr, phyaddr + app_info_bytes);
         }
 
         fclose(fp);
@@ -262,8 +269,6 @@ static void write_img_info(int nbytes_kernel, task_info_t *taskinfo,
     
     /* [p1-task4] 
         write tasknum, os size and APP-Info offset at the end of bootblock sector 
-        Location Demonstration:
-            ... | tasknum(2 bytes) | os_size(2 bytes) | app_info_offset(2 bytes) |(end of bootblock sector)
     */
 
         short os_size = NBYTES2SEC(nbytes_kernel);

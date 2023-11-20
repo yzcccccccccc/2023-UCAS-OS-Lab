@@ -122,8 +122,8 @@ static void init_pcb(void)
     char name[] = "shell";
     char *fake_argv[1];
     fake_argv[0] = (char *)(&name);
-    int shell_pid = init_pcb_vname(name, 1, fake_argv);
-    pcb[shell_pid].mask = 0x3;                  // both core can exec
+    //int shell_pid = init_pcb_vname(name, 1, fake_argv);
+    //pcb[shell_pid].mask = 0x3;                  // both core can exec
 
     /* TODO: [p2-task1] remember to initialize 'current_running' */
     pid0_core0_pcb.status = TASK_RUNNING;
@@ -202,7 +202,7 @@ int main(void)
                 );
 
         // [p4-task1] unmap!
-        unmap();
+        unmap_boot();
         spin_lock_release(&unmap_sync_lock);
 
         printk("> [INIT] Sub core initialization succeeded. :D\n");
@@ -266,8 +266,6 @@ int main(void)
         // NOTE: The function of sstatus.sie is different from sie's
         bios_set_timer(get_ticks() + TIMER_INTERVAL);
 
-        printk("> [INIT] Main core initialization succeeded. :D\n");
-
         // [p3-multicore] wakeup sub core :P
         wakeup_other_hart();
 
@@ -275,6 +273,9 @@ int main(void)
         spin_lock_init(&unmap_sync_lock);
         spin_lock_try_acquire(&unmap_sync_lock);            // lock, wait core1 unlock it
         spin_lock_acquire(&unmap_sync_lock);
+         printk("> [INIT] Unmap boot_addr succeeded. :D\n");
+
+        printk("> [INIT] Main core initialization succeeded. :D\n");
 
         // Infinite while loop, where CPU stays in a low-power state (QAQQQQQQQQQQQ)
         while (1)
