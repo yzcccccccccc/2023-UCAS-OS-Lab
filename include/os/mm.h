@@ -26,6 +26,8 @@
 #ifndef MM_H
 #define MM_H
 
+#include <os/sched.h>
+#include <os/list.h>
 #include <type.h>
 #include <pgtable.h>
 
@@ -40,7 +42,23 @@
 #define ROUND(a, n)     (((((uint64_t)(a))+(n)-1)) & ~((n)-1))
 #define ROUNDDOWN(a, n) (((uint64_t)(a)) & ~((n)-1))
 
+/* [p4] page-frame management */
+#define NUM_MAX_PGFRAME 200
+#define LIST_PGF_OFFSET 16
+
+typedef struct pgf{
+    uint64_t    kva;
+    uint64_t    va;
+    list_node_t list;
+    pid_t       user;
+    pcb_t       *user_pcb;
+}pgf_t;
+extern pgf_t pf[NUM_MAX_PGFRAME];
+extern list_head free_pf, used_pf;
+
 extern ptr_t allocPage(int numPage);
+extern void init_page();
+
 // TODO [P4-task1] */
 void freePage(ptr_t baseAddr);
 

@@ -11,6 +11,24 @@ ptr_t allocPage(int numPage)
     return ret;
 }
 
+/* [p4] */
+pgf_t pf[NUM_MAX_PGFRAME];
+LIST_HEAD(free_pf);
+LIST_HEAD(used_pf);
+
+/****************************************************************
+    In this case, we only use the pages in pf[]. In init_page(),
+we need to allocate a kernel page (to some degrees, it's also the
+physical page) for every item of pf[].
+*****************************************************************/
+void init_page(){
+    for (int i = 0; i < NUM_MAX_PGFRAME; i++){
+        pf[i].kva = allocPage(1);
+        pf[i].user = -1;                    // -1 means unallocated
+        list_insert(&free_pf, &pf[i].list);
+    }
+}
+
 // NOTE: Only need for S-core to alloc 2MB large page
 #ifdef S_CORE
 static ptr_t largePageMemCurr = LARGE_PAGE_FREEMEM;
