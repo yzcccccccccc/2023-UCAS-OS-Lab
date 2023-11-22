@@ -13,19 +13,19 @@
 
 pcb_t pcb[NUM_MAX_TASK];
 const ptr_t pid0_core0_stack = INIT_KERNEL_STACK + PAGE_SIZE;
-const ptr_t pid0_core1_stack = INIT_KERNEL_STACK + 3 * PAGE_SIZE;
+const ptr_t pid0_core1_stack = INIT_KERNEL_STACK + 2 * PAGE_SIZE;
 pcb_t pid0_core0_pcb = {
     .pid = 0,
-    .kernel_sp = (ptr_t)(pid0_core0_stack - PAGE_SIZE),
-    .user_sp = (ptr_t)pid0_core0_stack,
+    .kernel_sp = (ptr_t)pid0_core0_stack,
+    .user_sp = (ptr_t)(pid0_core0_stack + 2 * PAGE_SIZE),
     .cid = 0,
     .mask = 0x1,
     .name = "init0"
 };
 pcb_t pid0_core1_pcb = {
     .pid = 0,
-    .kernel_sp = (ptr_t)(pid0_core1_stack - PAGE_SIZE),
-    .user_sp = (ptr_t)pid0_core1_stack,
+    .kernel_sp = (ptr_t)pid0_core1_stack,
+    .user_sp = (ptr_t)(pid0_core1_stack + 2 * PAGE_SIZE),
     .cid = 1,
     .mask = 0x2,
     .name = "init1"
@@ -83,6 +83,11 @@ void do_scheduler(void)
     next->cid = cpu_id;
     process_id[cpu_id] = next->pid;
     current_running[cpu_id] = next;
+
+    // [p4] switch pgdir
+    set_satp(SATP_MODE_SV39, next->pid, kva2pa(next->pgdir) >> NORMAL_PAGE_SHIFT);
+    local_flush_tlb_all();
+    local_flush_icache_all();
 
     // TODO: [p2-task1] switch_to current_running
     switch_to(prev, current_running[cpu_id]);

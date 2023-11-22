@@ -3,12 +3,15 @@
 #include <os/string.h>
 #include <os/mm.h>
 #include <os/smp.h>
+#include <printk.h>
 #include <csr.h>
 
 extern void ret_from_exception();
 
+// kernel_stack & user_stack: use kernel virtual address !
 void init_pcb_stack(ptr_t kernel_stack, ptr_t user_stack, ptr_t entry_point, pcb_t *pcb,
         int argc, char *argv[]){
+    /* [p2] regs_contxt, saving regs when interruptted, on the kernel stack */
     regs_context_t *pt_regs =
         (regs_context_t *)(kernel_stack - sizeof(regs_context_t));
     for (int i = 0; i < 32; i++)
@@ -17,9 +20,9 @@ void init_pcb_stack(ptr_t kernel_stack, ptr_t user_stack, ptr_t entry_point, pcb
     pt_regs->regs[10] = (reg_t)argc;            // a0
 
     pt_regs->sepc = (reg_t)entry_point;
-    pt_regs->sstatus = SR_SPIE & ~SR_SPP;
+    pt_regs->sstatus = (SR_SPIE | SR_SUM) & ~SR_SPP;
 
-    /* [p3] passing argv content! */
+    /* [p3] passing argv content! on the user_stack */
     char **pt_argv = (char **)(user_stack - (argc + 1) * 8);
     ptr_t user_sp = (ptr_t)pt_argv;
     for (int i = 0; i < argc; i++){
@@ -29,10 +32,10 @@ void init_pcb_stack(ptr_t kernel_stack, ptr_t user_stack, ptr_t entry_point, pcb
     }
     pt_argv[argc] = NULL;
 
-    pt_regs->regs[11] = (reg_t)pt_argv;     // a1
-
-    user_sp = ROUNDDOWN(user_sp, 16);       // 128 bits = 16 bytes
-    pt_regs->regs[2] = (reg_t)user_sp;       // sp
+    // pay attention that pcb->user_sp is the user virtual addr !
+    pt_regs->regs[11]   = (reg_t)(pcb->user_sp - (user_stack - (ptr_t)pt_argv));        // a1
+    user_sp = ROUNDDOWN(user_sp, 16);                                                   // 128 bits = 16 bytes
+    pt_regs->regs[2]    = (reg_t)(pcb->user_sp - (user_stack - user_sp));               // sp
 
 
     /* TODO: [p2-task1] set sp to simulate just returning from switch_to
@@ -44,9 +47,9 @@ void init_pcb_stack(ptr_t kernel_stack, ptr_t user_stack, ptr_t entry_point, pcb
     for (int i = 0; i < 14; i++)
         pt_switchto->regs[i] = 0;
     pcb->kernel_sp = (reg_t)pt_switchto;
-    pcb->user_sp = (reg_t)user_sp;
-    pt_switchto->regs[1] = (reg_t)pt_switchto;          // sp
-    pt_switchto->regs[0] = (reg_t)ret_from_exception;   // ra
+    pcb->user_sp = (reg_t)(pcb->user_sp - (user_stack - user_sp));
+    pt_switchto->regs[1] = (reg_t)pt_switchto;                      // sp
+    pt_switchto->regs[0] = (reg_t)ret_from_exception;               // ra
 }
 
 pid_t init_pcb_vname(char *name, int argc, char *argv[]){
@@ -64,19 +67,26 @@ pid_t init_pcb_vname(char *name, int argc, char *argv[]){
     if (!alloc_pcb_idx)
         return 0;               // allocated fail.
 
-    ptr_t entry_point = (load_task_img(name));
+    pcb_t* pcb_new = pcb + alloc_pcb_idx;
+    uint64_t pgdir = 0;
+    // [p4] allocate the pgdir
+    if (pcb_new->status == TASK_UNUSED){       // first allocated
+        pgdir = allocPage(1);                  // directly alloc, cause this is root page table, may be reused
+        copy_ker_pgdir(pgdir);
+        pcb_new->pgdir = pgdir;
+    }
+
+    // [p3] wait_list init
+    pcb_new->wait_list.next = pcb_new->wait_list.prev = &(pcb_new->wait_list);
+
+    // [p4] pf_list init
+    pcb_new->pf_list.next = pcb_new->pf_list.prev = &(pcb_new->pf_list);
+
+    ptr_t entry_point = (load_task_img(name, pcb_new));
     if (entry_point){
+        uint64_t kernel_stack_kva, user_stack_kva;
         load_suc = 1;
         pid_n++;
-
-        pcb_t* pcb_new = pcb + alloc_pcb_idx;
-        uint64_t pgdir = allocPage(1);                  // directly alloc, cause this is root page table, may be reused
-
-        // [p3] wait_list init
-        pcb_new->wait_list.next = pcb_new->wait_list.prev = &(pcb_new->wait_list);
-
-        // [p4] pf_list init
-        pcb_new->pf_list.next = pcb_new->pf_list.prev = &(pcb_new->pf_list);
         
         // alloc a page for kernel stack
         if (pcb_new->status == TASK_UNUSED){
@@ -85,10 +95,11 @@ pid_t init_pcb_vname(char *name, int argc, char *argv[]){
         else{
             pcb_new->kernel_sp  = pcb_new->kernel_stack_base;
         }
+        kernel_stack_kva = pcb_new->kernel_sp;
 
         // alloc a page for user stack
         pcb_new->user_sp = pcb_new->user_stack_base = USER_STACK_ADDR;
-        alloc_page_helper(USER_STACK_ADDR, pgdir, pcb_new);
+        user_stack_kva = alloc_page_helper(USER_STACK_ADDR - NORMAL_PAGE_SIZE, pgdir, pcb_new);
        
         pcb_new->pid = pid_n;
         pcb_new->status = TASK_READY;
@@ -108,7 +119,7 @@ pid_t init_pcb_vname(char *name, int argc, char *argv[]){
         strcpy(pcb_new->name, name);
         list_insert(&ready_queue, &pcb_new->list);
 
-        init_pcb_stack(pcb_new->kernel_sp, pcb_new->user_sp, entry_point, pcb_new, argc, argv);
+        init_pcb_stack(kernel_stack_kva, user_stack_kva, entry_point, pcb_new, argc, argv);
     }
     else {
         load_suc = 0;

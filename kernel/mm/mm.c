@@ -17,6 +17,16 @@ LIST_HEAD(free_pf);
 LIST_HEAD(pinned_used_pf);
 LIST_HEAD(unpinned_used_pf);
 
+// copy kernel pgtable into dest_pgdir (kva)
+void copy_ker_pgdir(uint64_t dest_pgdir){
+    PTE *dest_pgtab = (PTE *)dest_pgdir;
+    PTE *ker_pgtab  = (PTE *)pa2kva(PGDIR_PA);
+    int ITE_BOUND = NORMAL_PAGE_SIZE / sizeof(PTE);
+    for (int i = 0; i < ITE_BOUND; i++)
+        dest_pgtab[i] = ker_pgtab[i];
+    return;
+}
+
 /****************************************************************
     In this case, we only use the pages in pf[]. In init_page(),
 we need to allocate a kernel page (to some degrees, it's also the
@@ -32,17 +42,15 @@ void init_page(){
 // allocate 1 page from free_pf (list) for pcb, return kva of the page, type  PINNED or UNPINNED
 ptr_t allocPage_from_freePF(int type, pcb_t *pcb_ptr, uint64_t va){
     list_node_t *pf_list_ptr;
-    list_node_t pcb_pf_list;
     pgf_t *pf_ptr = NULL;
     if (!list_empty(&free_pf)){
         pf_list_ptr = list_pop(&free_pf);
         pf_ptr = (pgf_t *)((void *)pf_list_ptr - LIST_PGF_OFFSET);
-        pcb_pf_list = pf_ptr->pcb_list;
         if (type == PINNED)
             list_insert(&pinned_used_pf, pf_list_ptr);
         else
             list_insert(&unpinned_used_pf, pf_list_ptr);
-        list_insert(&pcb_ptr->pf_list, &pcb_pf_list);               // upload to certain pcb!
+        list_insert(&pcb_ptr->pf_list, &(pf_ptr->pcb_list));               // upload to certain pcb!
         pf_ptr->va          = get_vf(va);
         pf_ptr->user_pid    = pcb_ptr->pid;
     }
@@ -121,14 +129,14 @@ uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, pcb_t *pcb_ptr)
             afterwards, so directly allocate by allocPage()
         ************************************************************************/
         set_pfn(&pmd2[vpn2], kva2pa(allocPage(1)) >> NORMAL_PAGE_SHIFT);
-        set_attribute(&pmd2[vpn2], _PAGE_PRESENT);
+        set_attribute(&pmd2[vpn2], _PAGE_PRESENT | _PAGE_USER);
         clear_pgdir(pa2kva(get_pa(pmd2[vpn2])));
     }
     PTE *pmd1 = (PTE *)pa2kva(get_pa(pmd2[vpn2]));
     if (!(pmd1[vpn1] & _PAGE_PRESENT)){
         // alloc a new page for the third level pagetable
         set_pfn(&pmd1[vpn1], kva2pa(allocPage(1)) >> NORMAL_PAGE_SHIFT);
-        set_attribute(&pmd1[vpn1], _PAGE_PRESENT);
+        set_attribute(&pmd1[vpn1], _PAGE_PRESENT | _PAGE_USER);
         clear_pgdir(pa2kva(get_pa(pmd1[vpn1])));
     }
     PTE *pmd0 = (PTE *)pa2kva(get_pa(pmd1[vpn1]));
@@ -138,7 +146,7 @@ uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, pcb_t *pcb_ptr)
             unpinned.
         *********************************************************************/
         set_pfn(&pmd0[vpn0], kva2pa(allocPage_from_freePF(UNPINNED, pcb_ptr, va)) >> NORMAL_PAGE_SHIFT);
-        set_attribute(&pmd0[vpn0], _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC | _PAGE_ACCESSED | _PAGE_DIRTY);
+        set_attribute(&pmd0[vpn0], _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC | _PAGE_ACCESSED | _PAGE_DIRTY | _PAGE_USER);
     }
     return pa2kva(get_pa(pmd0[vpn0]));
 }

@@ -122,11 +122,12 @@ static void init_pcb(void)
     char name[] = "shell";
     char *fake_argv[1];
     fake_argv[0] = (char *)(&name);
-    //int shell_pid = init_pcb_vname(name, 1, fake_argv);
-    //pcb[shell_pid].mask = 0x3;                  // both core can exec
+    int shell_pid = init_pcb_vname(name, 1, fake_argv);
+    pcb[shell_pid].mask = 0x3;                  // both core can exec
 
     /* TODO: [p2-task1] remember to initialize 'current_running' */
     pid0_core0_pcb.status = TASK_RUNNING;
+    pid0_core0_pcb.pgdir  = pa2kva(PGDIR_PA);
     current_running[0] = &pid0_core0_pcb;
     asm volatile ("mv tp, %0\n\t"
                 :
@@ -194,6 +195,7 @@ int main(void)
         bios_set_timer(get_ticks() + TIMER_INTERVAL);
 
         pid0_core1_pcb.status = TASK_RUNNING;
+        pid0_core1_pcb.pgdir = pa2kva(PGDIR_PA);
         current_running[1] = &pid0_core1_pcb;
         asm volatile ("mv tp, %0\n\t"
                 :
@@ -210,9 +212,6 @@ int main(void)
         unlock_kernel();
         while (1)
         {
-            // If you do non-preemptive scheduling, it's used to surrender control
-            //do_scheduler();
-
             // If you do preemptive scheduling, they're used to enable CSR_SIE and wfi
             enable_preempt();
             asm volatile("wfi");
@@ -227,6 +226,11 @@ int main(void)
 
         // Init task information (〃'▽'〃)
         init_task_info();
+
+        // [p4-init_pg]
+        init_page();
+        bios_putstr("> [INIT] Page pool initialization succeeded. :D\n");
+        //printk("> [INIT] Page pool succeeded. :D\n");
 
         // Init Process Control Blocks |•'-'•) ✧
         init_pcb();
@@ -273,9 +277,12 @@ int main(void)
         spin_lock_init(&unmap_sync_lock);
         spin_lock_try_acquire(&unmap_sync_lock);            // lock, wait core1 unlock it
         spin_lock_acquire(&unmap_sync_lock);
-         printk("> [INIT] Unmap boot_addr succeeded. :D\n");
+        lock_kernel();
+        //unmap_boot();
+        printk("> [INIT] Unmap boot_addr succeeded. :D\n");
 
         printk("> [INIT] Main core initialization succeeded. :D\n");
+        unlock_kernel();
 
         // Infinite while loop, where CPU stays in a low-power state (QAQQQQQQQQQQQ)
         while (1)

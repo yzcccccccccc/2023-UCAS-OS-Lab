@@ -30,6 +30,6 @@ void lock_kernel()
 void unlock_kernel()
 {
     /* TODO: P3-TASK3 multicore*/
-    spin_lock_release(&kernel_lock);
     kernel_cpu_id = -1;
+    spin_lock_release(&kernel_lock);
 }

@@ -93,7 +93,6 @@ void exec(){
 
     int need_wait = 1;
     if (buffer[buffer_len - 1] == '&'){
-        buffer_len--;
         need_wait = 0;
     }
     

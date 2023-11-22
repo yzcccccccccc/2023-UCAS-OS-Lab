@@ -47,10 +47,11 @@ uint64_t load_task_img(char *taskname, pcb_t *pcb_ptr)
 
             // fine transporting !
             // pay attention that task_addr is in (another process's) user pgtable, so we need to use kernel virual address.
-            char *app_ptr, *head_ptr;
-            head_ptr = (char *)st_kva;
-            app_ptr = (char *)(st_kva + task_offset - st_sec_id * SECTOR_SIZE);
-            for (int j = 0; j < task_filesz; j++){
+            int *app_ptr, *head_ptr;
+            int ITE_BOUND = task_filesz / sizeof(int);
+            head_ptr = (int *)st_kva;
+            app_ptr = (int *)(st_kva + task_offset - st_sec_id * SECTOR_SIZE);
+            for (int j = 0; j < ITE_BOUND; j++){
                 *head_ptr = *app_ptr;
                 head_ptr++;
                 app_ptr++;

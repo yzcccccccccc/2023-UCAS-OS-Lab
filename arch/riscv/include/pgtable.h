@@ -136,4 +136,38 @@ static inline uint64_t get_vf(uint64_t va){
     return ((va & VA_MASK) >> NORMAL_PAGE_SHIFT) << NORMAL_PAGE_SHIFT;
 }
 
+// [p4] get the content of virtual addr va
+static inline uint32_t get_cont_v(uint64_t va, uint64_t pgdir){
+    va &= VA_MASK;
+    uint64_t vpn2 = va >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS);
+    uint64_t vpn1 = (vpn2 << PPN_BITS) ^
+                    (va >> (NORMAL_PAGE_SHIFT + PPN_BITS));
+    uint64_t vpn0 = (vpn2 << (2 * PPN_BITS)) ^
+                    (vpn1 << PPN_BITS) ^
+                    (va >> (NORMAL_PAGE_SHIFT));
+    PTE *pmd2 = (PTE *)pgdir;
+    PTE *pmd1 = (PTE *)pa2kva(get_pa(pmd2[vpn2]));
+    PTE *pmd0 = (PTE *)pa2kva(get_pa(pmd1[vpn1]));
+    return *(uint32_t *)(pa2kva(get_pa(pmd0[vpn0])));
+}
+
+// [p4] get the kva of virtual addr va
+static inline uint64_t get_kva_v(uint64_t va, uint64_t pgdir){
+    va &= VA_MASK;
+    uint64_t vpn2 = va >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS);
+    uint64_t vpn1 = (vpn2 << PPN_BITS) ^
+                    (va >> (NORMAL_PAGE_SHIFT + PPN_BITS));
+    uint64_t vpn0 = (vpn2 << (2 * PPN_BITS)) ^
+                    (vpn1 << PPN_BITS) ^
+                    (va >> (NORMAL_PAGE_SHIFT));
+    uint64_t offset = (vpn2 << (2 * PPN_BITS + NORMAL_PAGE_SHIFT)) ^
+                    (vpn1 << (PPN_BITS + NORMAL_PAGE_SHIFT)) ^
+                    (vpn0 << NORMAL_PAGE_SHIFT) ^
+                    va;
+    PTE *pmd2 = (PTE *)pgdir;
+    PTE *pmd1 = (PTE *)pa2kva(get_pa(pmd2[vpn2]));
+    PTE *pmd0 = (PTE *)pa2kva(get_pa(pmd1[vpn1]));
+    return (pa2kva(get_pa(pmd0[vpn0])) | offset);
+}
+
 #endif  // PGTABLE_H
