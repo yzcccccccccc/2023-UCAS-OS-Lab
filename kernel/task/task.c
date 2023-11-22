@@ -8,6 +8,27 @@
 
 extern void ret_from_exception();
 
+/**************************************************************************
+    Kernel Stack:
+    ______________________________________________________________________
+    (kva)kernel_stack/pcb->kernel_stack:    -----------------------------
+                                                (sizeof regs_contxt)
+    (kva)pt_regs:                           -----------------------------
+                                                (sizeof switch_contxt)
+    (kva)pt_switchto:                       -----------------------------
+    ______________________________________________________________________
+    User Stack:
+    ______________________________________________________________________
+    (kva)user_stack/(uva)pcb->user_stack:   -----------------------------
+                                                (sizeof *argv[])
+    (kva)pt_argv:                           -----------------------------
+                                                (sizeof strings and
+                                                alignment.)
+    (kva)user_sp(final):                    -----------------------------
+    ______________________________________________________________________
+
+***************************************************************************/
+
 // kernel_stack & user_stack: use kernel virtual address !
 void init_pcb_stack(ptr_t kernel_stack, ptr_t user_stack, ptr_t entry_point, pcb_t *pcb,
         int argc, char *argv[]){
@@ -28,14 +49,17 @@ void init_pcb_stack(ptr_t kernel_stack, ptr_t user_stack, ptr_t entry_point, pcb
     for (int i = 0; i < argc; i++){
         user_sp -= (strlen(argv[i]) + 1);
         strcpy((char *)user_sp, argv[i]);
-        pt_argv[i] = (char *)user_sp;
+        pt_argv[i] = (char *)(pcb->user_sp - (user_stack - user_sp));                   // save as uva
     }
     pt_argv[argc] = NULL;
 
     // pay attention that pcb->user_sp is the user virtual addr !
-    pt_regs->regs[11]   = (reg_t)(pcb->user_sp - (user_stack - (ptr_t)pt_argv));        // a1
+    pt_regs->regs[11]   = (reg_t)(pcb->user_sp - (user_stack - (ptr_t)pt_argv));        // a1, addr of *argv[]
     user_sp = ROUNDDOWN(user_sp, 16);                                                   // 128 bits = 16 bytes
     pt_regs->regs[2]    = (reg_t)(pcb->user_sp - (user_stack - user_sp));               // sp
+
+    //uint64_t tmp_kva1 = get_kva_v(pt_regs->regs[11], pcb->pgdir);
+    //uint64_t tmp_kva2 = get_kva_v(pt_regs->regs[2], pcb->pgdir);
 
 
     /* TODO: [p2-task1] set sp to simulate just returning from switch_to
@@ -95,7 +119,7 @@ pid_t init_pcb_vname(char *name, int argc, char *argv[]){
         
         // alloc a page for kernel stack
         if (pcb_new->status == TASK_UNUSED){
-            pcb_new->kernel_stack_base = pcb_new->kernel_sp = allocPage(1) + PAGE_SIZE;
+            pcb_new->kernel_stack_base = pcb_new->kernel_sp = allocPage(1) + NORMAL_PAGE_SIZE;
         }
         else{
             pcb_new->kernel_sp  = pcb_new->kernel_stack_base;
@@ -104,7 +128,7 @@ pid_t init_pcb_vname(char *name, int argc, char *argv[]){
 
         // alloc a page for user stack
         pcb_new->user_sp = pcb_new->user_stack_base = USER_STACK_ADDR;
-        user_stack_kva = alloc_page_helper(USER_STACK_ADDR - NORMAL_PAGE_SIZE, pgdir, pcb_new);
+        user_stack_kva = alloc_page_helper(USER_STACK_ADDR - NORMAL_PAGE_SIZE, pgdir, pcb_new) + NORMAL_PAGE_SIZE;
        
         pcb_new->status = TASK_READY;
         pcb_new->cursor_x = pcb_new->cursor_y = 0;
@@ -112,7 +136,6 @@ pid_t init_pcb_vname(char *name, int argc, char *argv[]){
         // for thread
         pcb_new->tid = pcb_new->pid;
         pcb_new->thread_type = MAIN_THREAD;
-
 
         // [p3] CPU mask
         if (current_running[cpuid] == NULL)

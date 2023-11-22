@@ -16,7 +16,7 @@ uint64_t load_task_img(char *taskname, pcb_t *pcb_ptr)
     int task_size, task_offset;
     int st_sec_id, occ_sec_num;                 // start sector id and occupied sectors
     uint64_t task_addr = 0;
-    uint64_t task_filesz;
+    uint64_t task_memsz;
     uint64_t pgdir = pcb_ptr->pgdir;
 
     // 1 sector = 512 Bytes, 1 page = 4KB, 1 page = 8 sectors
@@ -24,12 +24,12 @@ uint64_t load_task_img(char *taskname, pcb_t *pcb_ptr)
     for (int i = 0; i < task_num; i++){
         if (strcmp(taskname, tasks[i].task_name) == 0){
             task_addr  = tasks[i].p_vaddr;
-            task_filesz = tasks[i].p_filesz;
+            task_memsz = tasks[i].p_memsz;
 
             task_size   = tasks[i].size;
             task_offset = tasks[i].offset;
             st_sec_id   = task_offset / SECTOR_SIZE;
-            occ_sec_num = NBYTES2SEC(task_offset + task_filesz) - st_sec_id;
+            occ_sec_num = NBYTES2SEC(task_offset + task_memsz) - st_sec_id;
 
             // load the img every 4KB
             uint64_t va = task_addr, kva, st_kva = 0;
@@ -48,7 +48,7 @@ uint64_t load_task_img(char *taskname, pcb_t *pcb_ptr)
             // fine transporting !
             // pay attention that task_addr is in (another process's) user pgtable, so we need to use kernel virual address.
             int *app_ptr, *head_ptr;
-            int ITE_BOUND = task_filesz / sizeof(int);
+            int ITE_BOUND = task_memsz / sizeof(int);
             head_ptr = (int *)st_kva;
             app_ptr = (int *)(st_kva + task_offset - st_sec_id * SECTOR_SIZE);
             for (int j = 0; j < ITE_BOUND; j++){

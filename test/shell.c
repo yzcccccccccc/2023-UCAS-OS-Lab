@@ -94,6 +94,7 @@ void exec(){
     int need_wait = 1;
     if (buffer[buffer_len - 1] == '&'){
         need_wait = 0;
+        buffer_len -= 2;
     }
     
     // get the name !

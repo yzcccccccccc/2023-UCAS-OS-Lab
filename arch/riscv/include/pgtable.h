@@ -169,7 +169,7 @@ static inline uint64_t get_kva_v(uint64_t va, uint64_t pgdir){
     PTE *pmd2 = (PTE *)pgdir;
     PTE *pmd1 = (PTE *)pa2kva(get_pa(pmd2[vpn2]));
     PTE *pmd0 = (PTE *)pa2kva(get_pa(pmd1[vpn1]));
-    return (pa2kva(get_pa(pmd0[vpn0])) | offset);
+    return (pa2kva(get_pa(pmd0[vpn0]) | offset));
 }
 
 #endif  // PGTABLE_H

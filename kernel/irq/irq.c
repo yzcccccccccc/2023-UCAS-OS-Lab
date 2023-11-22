@@ -4,6 +4,7 @@
 #include <os/string.h>
 #include <os/kernel.h>
 #include <os/smp.h>
+#include <os/mm.h>
 #include <printk.h>
 #include <assert.h>
 #include <screen.h>
@@ -38,6 +39,33 @@ void handle_irq_timer(regs_context_t *regs, uint64_t stval, uint64_t scause)
     do_scheduler();
 }
 
+/****************************************************************************
+    handle page fault, also handle the stack overflow here (core dumped)
+    User Stack Location:
+    ----------------------------------------------------
+    0xf00010000 ----------------------------------------
+                        User Stack Area (8KB)
+    0xf0000e000 ----------------------------------------
+                        Critical Area (4KB)
+    0xf0000d000 ----------------------------------------
+                (below are heap, txt, etc.)
+    ----------------------------------------------------
+    When entering the critical area, we assume that an overflow occur, and 
+    then we will kill the process.
+*****************************************************************************/
+void handle_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scause){
+    int cpuid = get_current_cpu_id();
+    if (stval >= USER_CRITICAL_AREA_LOWER && stval < USER_CRITICAL_AREA_UPPER){     // in the critical area!
+        printk("[Core %d]: Core dumped at: 0x%lx\n", cpuid, stval);
+        do_exit();
+    }      
+    else{
+        uint64_t pgdir = current_running[cpuid]->pgdir;
+        alloc_page_helper(stval, pgdir, current_running[cpuid]);
+    }
+    return;
+}
+
 void init_exception()
 {
     /* TODO: [p2-task3] initialize exc_table */
@@ -46,6 +74,7 @@ void init_exception()
         exc_table[i] = handle_other;
     }
     exc_table[EXCC_SYSCALL] = handle_syscall;
+    exc_table[EXCC_INST_PAGE_FAULT] = exc_table[EXCC_LOAD_PAGE_FAULT] = exc_table[EXCC_STORE_PAGE_FAULT] = handle_page_fault;
     /* TODO: [p2-task4] initialize irq_table */
     /* NOTE: handle_int, handle_other, etc.*/
     for (int i = 0; i < IRQC_COUNT; i++){

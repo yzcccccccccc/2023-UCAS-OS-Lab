@@ -82,6 +82,9 @@ extern ptr_t allocLargePage(int numPage);
 #else
 // NOTE: A/C-core
 #define USER_STACK_ADDR 0xf00010000
+#define USER_STACK_PAGE_NUM 2
+#define USER_CRITICAL_AREA_UPPER    (USER_STACK_ADDR - USER_STACK_PAGE_NUM * NORMAL_PAGE_SIZE)
+#define USER_CRITICAL_AREA_LOWER    (USER_CRITICAL_AREA_UPPER - NORMAL_PAGE_SIZE)
 #endif
 
 // TODO [P4-task1] */
