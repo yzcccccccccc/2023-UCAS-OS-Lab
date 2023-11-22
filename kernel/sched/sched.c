@@ -176,6 +176,9 @@ int do_kill(pid_t pid){                                 /* Kill process of certa
 
             pcb[i].status = TASK_EXITED;
 
+            // [p4] recycle the pages
+            recycle_pages(&pcb[i]);
+
             if (pid == current_running[cpuid]->pid){               // suicide :(
                 do_scheduler();
             }

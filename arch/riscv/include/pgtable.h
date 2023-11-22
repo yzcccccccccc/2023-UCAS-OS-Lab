@@ -119,6 +119,8 @@ static inline void set_attribute(PTE *entry, uint64_t bits)
 }
 
 // [p4-task1] this func is for setting the pgtab mapped memory cells to zero.
+// in boot.c pgdir_addr is real addr, after boot.c pgdir_addr should be kva
+// (because this func is only used by kernel)
 static inline void clear_pgdir(uintptr_t pgdir_addr)
 {
     /* TODO: [P4-task1] */

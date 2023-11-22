@@ -1,5 +1,7 @@
 #include <os/mm.h>
 
+int free_page_num = NUM_MAX_PGFRAME;
+
 // NOTE: A/C-core
 static ptr_t kernMemCurr = FREEMEM_KERNEL;
 
@@ -39,20 +41,28 @@ void init_page(){
         list_insert(&free_pf, &pf[i].list);
     }
 }
-// allocate 1 page from free_pf (list) for pcb, return kva of the page, type  PINNED or UNPINNED
+// [p4] allocate 1 page from free_pf (list) for pcb, return kva of the page, type  PINNED or UNPINNED
 ptr_t allocPage_from_freePF(int type, pcb_t *pcb_ptr, uint64_t va){
     list_node_t *pf_list_ptr;
     pgf_t *pf_ptr = NULL;
     if (!list_empty(&free_pf)){
         pf_list_ptr = list_pop(&free_pf);
         pf_ptr = (pgf_t *)((void *)pf_list_ptr - LIST_PGF_OFFSET);
+        
+        // insert into used_queue
         if (type == PINNED)
             list_insert(&pinned_used_pf, pf_list_ptr);
         else
             list_insert(&unpinned_used_pf, pf_list_ptr);
-        list_insert(&pcb_ptr->pf_list, &(pf_ptr->pcb_list));               // upload to certain pcb!
+
+        // load to given pcb
+        list_insert(&pcb_ptr->pf_list, &(pf_ptr->pcb_list));
+        
+        // fill the info
         pf_ptr->va          = get_vf(va);
         pf_ptr->user_pid    = pcb_ptr->pid;
+
+        free_page_num--;
     }
     return pf_ptr == NULL ? 0 : pf_ptr->kva;
 }
@@ -69,6 +79,56 @@ ptr_t allocLargePage(int numPage)
 }
 #endif
 
+// [p4] recycle the pages occupied by given pcb
+/******************************************************************
+    Unmap & recycle:
+    ---------       ---------       ---------       ---------
+    +       +       +       +       +       +       +       +
+    +       +       +       +       +       +       +       +
+    + vpn 2 +  ->   + vpn 1 + ->    + vpn 0 + ->    +       +
+    +       +       +       +       +       +       +       +
+    +       +       +       +       +       +       +       +
+    +       +       +       +       +       +       +       +
+    ---------       ---------       ---------       ---------
+    First(pmd2)     Second(pmd1)    Third(pmd0)     physical page
+    
+    Unmap:      set pmd0[vpn0] to zero
+    Recycle:    recycle the physical page
+*******************************************************************/
+void recycle_pages(pcb_t *pcb_ptr){
+    list_node_t *ptr;
+    pgf_t *pf_node;
+    uint64_t pgdir = pcb_ptr->pgdir;
+    while (!list_empty(&pcb_ptr->pf_list)){
+        ptr = list_pop(&pcb_ptr->pf_list);
+        pf_node = (pgf_t *)((void *)ptr -PCBLIST_PGF_OFFSET);
+        free_page_num++;
+
+        // clear the physical page
+        clear_pgdir(pf_node->kva);
+
+        // unmap
+        uint64_t va = pf_node->va & VA_MASK;
+        uint64_t vpn2 = va >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS);
+        uint64_t vpn1 = (vpn2 << PPN_BITS) ^
+                        (va >> (NORMAL_PAGE_SHIFT + PPN_BITS));
+        uint64_t vpn0 = (vpn2 << (2 * PPN_BITS)) ^
+                        (vpn1 << PPN_BITS) ^
+                        (va >> (NORMAL_PAGE_SHIFT));
+        PTE *pmd2 = (PTE *)pgdir;
+        PTE *pmd1 = (PTE *)pa2kva(get_pa(pmd2[vpn2]));
+        PTE *pmd0 = (PTE *)pa2kva(get_pa(pmd1[vpn1]));
+        pmd0[vpn0] = 0;
+
+        pf_node->va = 0;
+        pf_node->user_pid = -1;
+        
+        // remove from the used_queue (fix in swap)
+        list_delete(&pf_node->list);
+    }
+    return;
+}
+
 // [p4-task1] unmap 0x50200000 ~ 0x51000000
 void unmap_boot(){
     PTE *pgdir = (PTE *)pa2kva(PGDIR_PA), *pmd1;
@@ -84,12 +144,12 @@ void unmap_boot(){
 
 void freePage(ptr_t baseAddr)
 {
-    // TODO [P4-task1] (design you 'freePage' here if you need):
+    // TODO [P4-task1] (design your 'freePage' here if you need):
 }
 
 void *kmalloc(size_t size)
 {
-    // TODO [P4-task1] (design you 'kmalloc' here if you need):
+    // TODO [P4-task1] (design your 'kmalloc' here if you need):
     return NULL;
     
 }
@@ -127,7 +187,7 @@ uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, pcb_t *pcb_ptr)
         /***********************************************************************
                 allocate a new page as a second level page-table. May be reused
             afterwards, so directly allocate by allocPage()
-        ************************************************************************/
+        *********************************************g***************************/
         set_pfn(&pmd2[vpn2], kva2pa(allocPage(1)) >> NORMAL_PAGE_SHIFT);
         set_attribute(&pmd2[vpn2], _PAGE_PRESENT | _PAGE_USER);
         clear_pgdir(pa2kva(get_pa(pmd2[vpn2])));

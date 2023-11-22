@@ -47,6 +47,8 @@
 #define LIST_PGF_OFFSET     16
 #define PCBLIST_PGF_OFFSET  32
 
+extern int free_page_num;
+
 typedef enum{
     UNPINNED,
     PINNED
@@ -65,6 +67,7 @@ extern list_head free_pf, pinned_used_pf, unpinned_used_pf;
 extern ptr_t allocPage(int numPage);
 extern ptr_t allocPage_from_freePF(int type, pcb_t *pcb_ptr, uint64_t va);
 extern void init_page();
+extern void recycle_pages(pcb_t *pcb_ptr);
 extern void copy_ker_pgdir(uint64_t dest_pgdir);
 
 // TODO [P4-task1] */

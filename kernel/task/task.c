@@ -75,6 +75,8 @@ pid_t init_pcb_vname(char *name, int argc, char *argv[]){
         copy_ker_pgdir(pgdir);
         pcb_new->pgdir = pgdir;
     }
+    else
+        pgdir = pcb_new->pgdir;
 
     // [p3] wait_list init
     pcb_new->wait_list.next = pcb_new->wait_list.prev = &(pcb_new->wait_list);
@@ -82,11 +84,14 @@ pid_t init_pcb_vname(char *name, int argc, char *argv[]){
     // [p4] pf_list init
     pcb_new->pf_list.next = pcb_new->pf_list.prev = &(pcb_new->pf_list);
 
+    // [p4] pid
+    pid_n++;
+    pcb_new->pid = pid_n;
+
     ptr_t entry_point = (load_task_img(name, pcb_new));
     if (entry_point){
         uint64_t kernel_stack_kva, user_stack_kva;
         load_suc = 1;
-        pid_n++;
         
         // alloc a page for kernel stack
         if (pcb_new->status == TASK_UNUSED){
@@ -101,12 +106,11 @@ pid_t init_pcb_vname(char *name, int argc, char *argv[]){
         pcb_new->user_sp = pcb_new->user_stack_base = USER_STACK_ADDR;
         user_stack_kva = alloc_page_helper(USER_STACK_ADDR - NORMAL_PAGE_SIZE, pgdir, pcb_new);
        
-        pcb_new->pid = pid_n;
         pcb_new->status = TASK_READY;
         pcb_new->cursor_x = pcb_new->cursor_y = 0;
 
         // for thread
-        pcb_new->tid = pid_n;
+        pcb_new->tid = pcb_new->pid;
         pcb_new->thread_type = MAIN_THREAD;
 
 
@@ -123,6 +127,7 @@ pid_t init_pcb_vname(char *name, int argc, char *argv[]){
     }
     else {
         load_suc = 0;
+        pid_n--;
     }
     return pid_n * load_suc;
 }
