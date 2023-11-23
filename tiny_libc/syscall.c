@@ -2,6 +2,8 @@
 #include <stdint.h>
 #include <kernel.h>
 #include <unistd.h>
+#include <stddef.h>
+#include <security_page.h>
 
 static const long IGNORE = 0L;
 
@@ -46,6 +48,10 @@ void sys_move_cursor_c(int dx, int dy)
 
 void sys_write(char *buff)
 {
+    /* [p4-task3] copy parameters to security page */
+    RESET_SECPAGE_PTR;
+    buff = (char *)copy_str_to_secPage(buff);
+
     /* TODO: [p2-task3] call invoke_syscall to implement sys_write */
     invoke_syscall(SYSCALL_WRITE, (long)buff, 0, 0, 0, 0);
 }
@@ -120,6 +126,11 @@ pid_t  sys_exec(int id, int argc, uint64_t arg0, uint64_t arg1, uint64_t arg2)
 #else
 pid_t  sys_exec(char *name, int argc, char **argv)
 {
+    /* [p4-task3] */
+    RESET_SECPAGE_PTR;
+    name = (char *)copy_str_to_secPage(name);
+    argv = (char **)copy_argv_to_secPage(argv, argc);
+
     /* TODO: [p3-task1] call invoke_syscall to implement sys_exec */
     return invoke_syscall(SYSCALL_EXEC, (long)name, (long)argc, (long)argv, 0, 0);
 }
@@ -236,6 +247,10 @@ void sys_semaphore_destroy(int sema_idx)
 
 int sys_mbox_open(char * name)
 {
+    /* [p4-task3] */
+    RESET_SECPAGE_PTR;
+    name = (char *)copy_str_to_secPage(name);
+
     /* TODO: [p3-task2] call invoke_syscall to implement sys_mbox_open */
     return invoke_syscall(SYSCALL_MBOX_OPEN, (long)name, 0, 0, 0, 0);
 }
@@ -248,24 +263,38 @@ void sys_mbox_close(int mbox_id)
 
 int sys_mbox_send(int mbox_idx, void *msg, int msg_length)
 {
+    /* [p4-task3] */
+    RESET_SECPAGE_PTR;
+    msg = (void *)copy_str_to_secPage((char *)msg);
+
     /* TODO: [p3-task2] call invoke_syscall to implement sys_mbox_send */
     return invoke_syscall(SYSCALL_MBOX_SEND, (long)mbox_idx, (long)msg, (long)msg_length, 0, 0);
 }
 
 int sys_mbox_recv(int mbox_idx, void *msg, int msg_length)
 {
+    /* [p4-task3] */
+    RESET_SECPAGE_PTR;
+    msg = (void *)copy_str_to_secPage((char *)msg);
+
     /* TODO: [p3-task2] call invoke_syscall to implement sys_mbox_recv */
     return invoke_syscall(SYSCALL_MBOX_RECV, (long)mbox_idx, (long)msg, (long)msg_length, 0, 0);
 }
 /************************************************************/
 
 int sys_taskset(char *name, int mask, int pid){
+    /* [p4-task3] */
+    RESET_SECPAGE_PTR;
+    name = (char *)copy_str_to_secPage(name);
+
+    /* [p3-task5] taskset */
     return invoke_syscall(SYSCALL_TASKSET, (long)name, (long)mask, (long)pid, 0, 0);
 }
 
 void* sys_shmpageget(int key)
 {
     /* TODO: [p4-task4] call invoke_syscall to implement sys_shmpageget */
+    return 0;
 }
 
 void sys_shmpagedt(void *addr)

@@ -127,13 +127,30 @@ extern ptr_t allocLargePage(int numPage);
 // TODO [P4-task1] */
 extern void* kmalloc(size_t size);
 extern void share_pgtable(uintptr_t dest_pgdir, uintptr_t src_pgdir);
-extern uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, pcb_t *pcb_ptr);
+extern uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, pcb_t *pcb_ptr, int type);
 extern void unmap_boot();
 
 // TODO [P4-task4]: shm_page_get/dt */
 uintptr_t shm_page_get(int key);
 void shm_page_dt(uintptr_t addr);
 
+// [p4-task3]: security page
+extern uint64_t do_security_page_ac();
+extern uint64_t do_security_page_rl(uint64_t va);
 
+//------------------------------------- Security Page Management -------------------------------------
+/*************************************************************************************
+    About the security page
+        considering this situation: core 0 just swaped out a user page (usr_pg), and
+    core 1 happens to trap due to a syscall instruction. Unfortunately, this syscall
+    coincides to pass a pointer arg, and the content of the pointer is in the usr_pg.
+    So after core 0 unlcoks the kernel, core 1 enters the kernel and try to parse the
+    content of the pointer, then a page-fault happens.
+        to sovle this situation, I try to use a special page, namely 'security page',
+    which is allocated to user at uva 0x5000 when create a process. we use this
+    pinned page to pass the pointer args' content.
+**************************************************************************************/
+
+#define SECURITY_BASE   0x5000
 
 #endif /* MM_H */

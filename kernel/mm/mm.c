@@ -1,4 +1,5 @@
 #include <os/mm.h>
+#include <os/smp.h>
 
 #define PAGE_OCC_SEC    8           // 4KB = 8 * 512B
 
@@ -219,7 +220,7 @@ void share_pgtable(uintptr_t dest_pgdir, uintptr_t src_pgdir)
     [p4]
     map va (allocate a physical pageframe) into pagetable pgdir, and this page belongs to pcb_ptr
 **************************************************************************************************/
-uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, pcb_t *pcb_ptr)
+uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, pcb_t *pcb_ptr, int type)
 {
     // TODO [P4-task1] alloc_page_helper:
     va &= VA_MASK;
@@ -253,10 +254,9 @@ uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, pcb_t *pcb_ptr)
     PTE *pmd0 = (PTE *)pa2kva(get_pa(pmd1[vpn1]));
     if (!(pmd0[vpn0] & _PAGE_PRESENT)){
         /********************************************************************
-                allocate a real physical page for the va, thus it should be 
-            unpinned.
+                allocate a real physical page for the va
         *********************************************************************/
-        set_pfn(&pmd0[vpn0], kva2pa(allocPage_from_freePF(UNPINNED, pcb_ptr, va)) >> NORMAL_PAGE_SHIFT);
+        set_pfn(&pmd0[vpn0], kva2pa(allocPage_from_freePF(type, pcb_ptr, va)) >> NORMAL_PAGE_SHIFT);
         set_attribute(&pmd0[vpn0], _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC | _PAGE_ACCESSED | _PAGE_DIRTY | _PAGE_USER);
     }
     return pa2kva(get_pa(pmd0[vpn0]));
@@ -297,7 +297,7 @@ void swap_in(swp_pg_t *in_page){
     // First: find a available physical page
     pcb_t *pcb_ptr = in_page->user_pcb;
     uint64_t va = in_page->va;
-    uint64_t alloc_kva = alloc_page_helper(va, pcb_ptr->pgdir, pcb_ptr);
+    uint64_t alloc_kva = alloc_page_helper(va, pcb_ptr->pgdir, pcb_ptr, UNPINNED);
 
     // Second: transfer!
     uint64_t phy_addr = kva2pa(alloc_kva);

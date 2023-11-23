@@ -182,8 +182,11 @@ static inline uint64_t get_kva_v(uint64_t va, uint64_t pgdir){
                     (vpn0 << NORMAL_PAGE_SHIFT) ^
                     va;
     PTE *pmd2 = (PTE *)pgdir;
+    if (!pmd2[vpn2])    return 0;
     PTE *pmd1 = (PTE *)pa2kva(get_pa(pmd2[vpn2]));
+    if (!pmd1[vpn1])    return 0;
     PTE *pmd0 = (PTE *)pa2kva(get_pa(pmd1[vpn1]));
+    if (!pmd0[vpn0])    return 0;
     return (pa2kva(get_pa(pmd0[vpn0]) | offset));
 }
 
