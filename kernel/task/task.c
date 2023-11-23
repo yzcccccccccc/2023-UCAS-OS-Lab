@@ -9,11 +9,7 @@
 extern void ret_from_exception();
 
 // [p4-task3] argc, argv may be swapped out ...
-#define TMP_ARG_NUM     64
-#define TMP_ARG_LEN     128
-char tmp_arg[TMP_ARG_NUM][TMP_ARG_LEN];
-char *tmp_argv[TMP_ARG_NUM];
-int tmp_argc;
+// abandoned, because argc is passed by regs, and argv will be on the security page
 
 /**************************************************************************
     Kernel Stack:
@@ -116,13 +112,6 @@ pid_t init_pcb_vname(char *name, int argc, char *argv[]){
     pcb_new->pf_list.next = pcb_new->pf_list.prev = &(pcb_new->pf_list);
     pcb_new->sf_list.next = pcb_new->sf_list.prev = &(pcb_new->sf_list);
 
-    // [p4-task3] copy the argc and argv
-    tmp_argc = argc;
-    for (int i = 0; i < argc; i++){
-        strcpy(tmp_arg[i], argv[i]);
-        tmp_argv[i] = tmp_arg[i];
-    }
-
     // [p4] pid
     pid_n++;
     pcb_new->pid = pid_n;
@@ -166,7 +155,7 @@ pid_t init_pcb_vname(char *name, int argc, char *argv[]){
         strcpy(pcb_new->name, name);
         list_insert(&ready_queue, &pcb_new->list);
 
-        init_pcb_stack(kernel_stack_kva, user_stack_kva, entry_point, pcb_new, tmp_argc, tmp_argv);
+        init_pcb_stack(kernel_stack_kva, user_stack_kva, entry_point, pcb_new, argc, argv);
     }
     else {
         load_suc = 0;
