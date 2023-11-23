@@ -153,7 +153,7 @@ void recycle_pages(pcb_t *pcb_ptr){
         sf_node->user_pcb = NULL;
 
         // remove from the used_queue and insert free_sf queue
-        list_delete(&pf_node->list);
+        list_delete(&sf_node->list);
         list_insert(&free_sf, &sf_node->list);
         free_swp_page_num++;
     }
@@ -173,7 +173,7 @@ void unmap_boot(){
     return;
 }
 
-// [p4-task1] unmap the virtual frame (va) into the page-table
+// [p4-task1] unmap the virtual frame (va) in the page-table
 void unmap(uint64_t va, uint64_t pgdir){
     va &= VA_MASK;
     uint64_t vpn2 = va >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS);
@@ -323,8 +323,8 @@ void swap_out(phy_pg_t *out_page){
     out_page->user_pcb = NULL;
     out_page->va = 0;
     list_delete(&(out_page->pcb_list));
-    list_delete(&(out_page->list));
     list_insert(&free_pf, &(out_page->list));
+    free_page_num++;
     return;
 }
 

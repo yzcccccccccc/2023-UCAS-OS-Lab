@@ -50,6 +50,20 @@ uint64_t load_task_img(char *taskname, pcb_t *pcb_ptr)
 
             // fine transporting !
             // pay attention that task_addr is in (another process's) user pgtable, so we need to use kernel virual address.
+            // consequent? - nope!, use (another process's) virtual addr, then convert it into kva
+            char *app_ptr, *head_ptr;
+            uint64_t head_uva, app_uva;
+            head_uva    = task_addr;
+            app_uva     = head_uva + task_offset - st_sec_id * SECTOR_SIZE;
+            for (int j = 0; j < task_memsz; j++){
+                head_ptr = (char *)get_kva_v(head_uva, pgdir);
+                app_ptr  = (char *)get_kva_v(app_uva, pgdir);
+                *head_ptr = *app_ptr;
+                head_uva++;
+                app_uva++;
+            }
+
+            /*
             int *app_ptr, *head_ptr;
             int ITE_BOUND = task_memsz / sizeof(int);
             head_ptr = (int *)st_kva;
@@ -58,7 +72,7 @@ uint64_t load_task_img(char *taskname, pcb_t *pcb_ptr)
                 *head_ptr = *app_ptr;
                 head_ptr++;
                 app_ptr++;
-            }
+            }*/
                 
             break;
         }
