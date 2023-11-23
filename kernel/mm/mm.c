@@ -1,6 +1,9 @@
 #include <os/mm.h>
 
-int free_page_num = NUM_MAX_PGFRAME;
+#define PAGE_OCC_SEC    8           // 4KB = 8 * 512B
+
+int free_page_num       = NUM_MAX_PHYPAGE;
+int free_swp_page_num   = NUM_MAX_SWPPAGE;
 
 // NOTE: A/C-core
 static ptr_t kernMemCurr = FREEMEM_KERNEL;
@@ -13,41 +16,53 @@ ptr_t allocPage(int numPage)
     return ret;
 }
 
-/* [p4] */
-pgf_t pf[NUM_MAX_PGFRAME];
+/* [p4] manage the physical pages */
+phy_pg_t pf[NUM_MAX_PHYPAGE];
 LIST_HEAD(free_pf);
 LIST_HEAD(pinned_used_pf);
 LIST_HEAD(unpinned_used_pf);
 
-// copy kernel pgtable into dest_pgdir (kva)
-void copy_ker_pgdir(uint64_t dest_pgdir){
-    PTE *dest_pgtab = (PTE *)dest_pgdir;
-    PTE *ker_pgtab  = (PTE *)pa2kva(PGDIR_PA);
-    int ITE_BOUND = NORMAL_PAGE_SIZE / sizeof(PTE);
-    for (int i = 0; i < ITE_BOUND; i++)
-        dest_pgtab[i] = ker_pgtab[i];
-    return;
-}
+/* [p4] manage the swap pages */
+swp_pg_t sf[NUM_MAX_SWPPAGE];
+LIST_HEAD(free_sf);
+LIST_HEAD(used_sf);
+uint64_t swap_start_offset = 0, swap_start_sector = 0;
 
 /****************************************************************
     In this case, we only use the pages in pf[]. In init_page(),
 we need to allocate a kernel page (to some degrees, it's also the
 physical page) for every item of pf[].
+    [p4] for swap:
+    init swap pages
 *****************************************************************/
 void init_page(){
-    for (int i = 0; i < NUM_MAX_PGFRAME; i++){
-        pf[i].kva = allocPage(1);
-        pf[i].user_pid = -1;                    // -1 means unallocated
+    // physical page
+    for (int i = 0; i < NUM_MAX_PHYPAGE; i++){
+        pf[i].kva       = allocPage(1);
+        pf[i].user_pid  = -1;                    // -1 means unallocated
         list_insert(&free_pf, &pf[i].list);
     }
+
+    // swap page
+    uint64_t _sector = swap_start_sector;
+    for (int i = 0; i < NUM_MAX_SWPPAGE; i++, _sector += PAGE_OCC_SEC){
+        sf[i].start_sector  = _sector;
+        sf[i].user_pid      = -1;
+        list_insert(&free_sf, &sf[i].list);
+    }
 }
+
+//------------------------------------- Physical Page Management -------------------------------------
+
 // [p4] allocate 1 page from free_pf (list) for pcb, return kva of the page, type  PINNED or UNPINNED
 ptr_t allocPage_from_freePF(int type, pcb_t *pcb_ptr, uint64_t va){
     list_node_t *pf_list_ptr;
-    pgf_t *pf_ptr = NULL;
-    if (!list_empty(&free_pf)){
+    phy_pg_t *pf_ptr = NULL;
+
+retry:
+    if (!list_empty(&free_pf)){                 // have free physical frame
         pf_list_ptr = list_pop(&free_pf);
-        pf_ptr = (pgf_t *)((void *)pf_list_ptr - LIST_PGF_OFFSET);
+        pf_ptr = (phy_pg_t *)((void *)pf_list_ptr - LIST_PGF_OFFSET);
         
         // insert into used_queue
         if (type == PINNED)
@@ -59,10 +74,17 @@ ptr_t allocPage_from_freePF(int type, pcb_t *pcb_ptr, uint64_t va){
         list_insert(&pcb_ptr->pf_list, &(pf_ptr->pcb_list));
         
         // fill the info
-        pf_ptr->va          = get_vf(va);
+        pf_ptr->va          = get_vf(va & VA_MASK);
+        pf_ptr->user_pcb    = pcb_ptr;
         pf_ptr->user_pid    = pcb_ptr->pid;
 
         free_page_num--;
+    }
+    else{                                       // swap out a physical frame
+        pf_list_ptr = list_pop(&unpinned_used_pf);
+        pf_ptr = (phy_pg_t *)((void *)pf_list_ptr - LIST_PGF_OFFSET);
+        swap_out(pf_ptr);
+        goto retry;
     }
     return pf_ptr == NULL ? 0 : pf_ptr->kva;
 }
@@ -79,7 +101,7 @@ ptr_t allocLargePage(int numPage)
 }
 #endif
 
-// [p4] recycle the pages occupied by given pcb
+
 /******************************************************************
     Unmap & recycle:
     ---------       ---------       ---------       ---------
@@ -95,36 +117,45 @@ ptr_t allocLargePage(int numPage)
     Unmap:      set pmd0[vpn0] to zero
     Recycle:    recycle the physical page
 *******************************************************************/
+
+// [p4] recycle the pages occupied by given pcb (both physical and swap)
 void recycle_pages(pcb_t *pcb_ptr){
     list_node_t *ptr;
-    pgf_t *pf_node;
+
+    // First: recycle physical page
+    phy_pg_t *pf_node;
     uint64_t pgdir = pcb_ptr->pgdir;
     while (!list_empty(&pcb_ptr->pf_list)){
         ptr = list_pop(&pcb_ptr->pf_list);
-        pf_node = (pgf_t *)((void *)ptr -PCBLIST_PGF_OFFSET);
+        pf_node = (phy_pg_t *)((void *)ptr -PCBLIST_PGF_OFFSET);
         free_page_num++;
 
-        // clear the physical page
-        clear_pgdir(pf_node->kva);
-
         // unmap
-        uint64_t va = pf_node->va & VA_MASK;
-        uint64_t vpn2 = va >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS);
-        uint64_t vpn1 = (vpn2 << PPN_BITS) ^
-                        (va >> (NORMAL_PAGE_SHIFT + PPN_BITS));
-        uint64_t vpn0 = (vpn2 << (2 * PPN_BITS)) ^
-                        (vpn1 << PPN_BITS) ^
-                        (va >> (NORMAL_PAGE_SHIFT));
-        PTE *pmd2 = (PTE *)pgdir;
-        PTE *pmd1 = (PTE *)pa2kva(get_pa(pmd2[vpn2]));
-        PTE *pmd0 = (PTE *)pa2kva(get_pa(pmd1[vpn1]));
-        pmd0[vpn0] = 0;
+        unmap(pf_node->va & VA_MASK, pgdir);
 
         pf_node->va = 0;
         pf_node->user_pid = -1;
+        pf_node->user_pcb = NULL;
         
-        // remove from the used_queue (fix in swap)
+        // remove from the used_queue & insert free_pf queue
         list_delete(&pf_node->list);
+        list_insert(&free_pf, &pf_node->list);
+    }
+
+    // Second: recycle swap page
+    swp_pg_t *sf_node;
+    while (!list_empty(&pcb_ptr->sf_list)){
+        ptr = list_pop(&pcb_ptr->sf_list);
+        sf_node = (swp_pg_t *)((void *)ptr - PCBLIST_PGF_OFFSET);
+
+        sf_node->va = 0;
+        sf_node->user_pid = -1;
+        sf_node->user_pcb = NULL;
+
+        // remove from the used_queue and insert free_sf queue
+        list_delete(&pf_node->list);
+        list_insert(&free_sf, &sf_node->list);
+        free_swp_page_num++;
     }
     return;
 }
@@ -142,6 +173,22 @@ void unmap_boot(){
     return;
 }
 
+// [p4-task1] unmap the virtual frame (va) into the page-table
+void unmap(uint64_t va, uint64_t pgdir){
+    va &= VA_MASK;
+    uint64_t vpn2 = va >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS);
+    uint64_t vpn1 = (vpn2 << PPN_BITS) ^
+                    (va >> (NORMAL_PAGE_SHIFT + PPN_BITS));
+    uint64_t vpn0 = (vpn2 << (2 * PPN_BITS)) ^
+                    (vpn1 << PPN_BITS) ^
+                    (va >> (NORMAL_PAGE_SHIFT));
+    PTE *pmd2 = (PTE *)pgdir;
+    PTE *pmd1 = (PTE *)pa2kva(get_pa(pmd2[vpn2]));
+    PTE *pmd0 = (PTE *)pa2kva(get_pa(pmd1[vpn1]));
+    pmd0[vpn0] = 0;
+    return;
+}
+
 void freePage(ptr_t baseAddr)
 {
     // TODO [P4-task1] (design your 'freePage' here if you need):
@@ -154,11 +201,15 @@ void *kmalloc(size_t size)
     
 }
 
-
 /* this is used for mapping kernel virtual address into user page table */
 void share_pgtable(uintptr_t dest_pgdir, uintptr_t src_pgdir)
 {
     // TODO [P4-task1] share_pgtable:
+    PTE *dest_pgtab = (PTE *)dest_pgdir;
+    PTE *src_pgtab  = (PTE *)src_pgdir;
+    int ITE_BOUND = NORMAL_PAGE_SIZE / sizeof(PTE);
+    for (int i = 0; i < ITE_BOUND; i++)
+        dest_pgtab[i] = src_pgtab[i];
 }
 
 /* allocate physical page for `va`, mapping it into `pgdir`,
@@ -210,6 +261,88 @@ uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, pcb_t *pcb_ptr)
     }
     return pa2kva(get_pa(pmd0[vpn0]));
 }
+
+//------------------------------------- Swap Page Management -------------------------------------
+
+// [p4-task3] copy a page's content from phyical memory to swap area
+void transfer_page_p2s(uint64_t phy_addr, uint64_t start_sector){
+    bios_sd_write((unsigned int)phy_addr, PAGE_OCC_SEC, (unsigned int)start_sector);
+}
+
+// [p4-task3] copy a page's content from swap area to physical memory
+void transfer_page_s2p(uint64_t phy_addr, uint64_t start_sector){
+    bios_sd_read((unsigned int)phy_addr, PAGE_OCC_SEC, (unsigned int)start_sector);
+}
+
+// [p4-task3] alloc a page on the disk for virtual frame va
+void allocPage_from_freeSF(pcb_t *pcb_ptr, uint64_t va){
+    va = get_vf(va & VA_MASK);
+    list_node_t *sf_list_ptr = list_pop(&free_sf);
+    swp_pg_t *sf_node = (swp_pg_t *)((void *)sf_list_ptr - LIST_PGF_OFFSET);
+    free_swp_page_num--;
+
+    sf_node->va = va;
+    sf_node->user_pcb = pcb_ptr;
+    sf_node->user_pid = pcb_ptr->pid;
+    list_insert(&(pcb_ptr->sf_list), &(sf_node->pcb_list));
+    list_insert(&(used_sf), &(sf_node->list));
+
+    // transfer!
+    uint64_t phy_addr = kva2pa(get_kva_v(va, pcb_ptr->pgdir));
+    transfer_page_p2s(phy_addr, sf_node->start_sector);
+}
+
+// [p4-task3] swap in the swap-area page
+void swap_in(swp_pg_t *in_page){
+    // First: find a available physical page
+    pcb_t *pcb_ptr = in_page->user_pcb;
+    uint64_t va = in_page->va;
+    uint64_t alloc_kva = alloc_page_helper(va, pcb_ptr->pgdir, pcb_ptr);
+
+    // Second: transfer!
+    uint64_t phy_addr = kva2pa(alloc_kva);
+    transfer_page_s2p(phy_addr, in_page->start_sector);
+}
+
+// [p4-task3] swap out a physical page (write_back = 1: dirty, write to the swap area)
+void swap_out(phy_pg_t *out_page){
+    uint64_t va = out_page->va & VA_MASK;
+    uint64_t pgdir = out_page->user_pcb->pgdir;
+
+    // First: write back (optional)
+    bool write_back = get_attribute(get_PTE_va(va, pgdir), _PAGE_DIRTY);
+    if (write_back){
+        swp_pg_t *swp_page = query_swp_page(va, out_page->user_pcb);
+        uint64_t phy_addr = kva2pa(out_page->kva);
+        transfer_page_p2s(phy_addr, swp_page->start_sector);
+    }
+
+    // Second: update physical frame info and page-table
+    unmap(va, pgdir);         // remove from the user page-table
+    out_page->user_pid = -1;
+    out_page->user_pcb = NULL;
+    out_page->va = 0;
+    list_delete(&(out_page->pcb_list));
+    list_delete(&(out_page->list));
+    list_insert(&free_pf, &(out_page->list));
+    return;
+}
+
+// [p4-task3] query the swp-page info (va: virtual frame addr)
+swp_pg_t *query_swp_page(uint64_t va, pcb_t *pcb_ptr){
+    swp_pg_t *rt_ptr = NULL;
+    list_node_t *ptr = pcb_ptr->sf_list.next;
+    while (ptr != &(pcb_ptr->sf_list)){
+        rt_ptr = (swp_pg_t *)((void *)ptr - PCBLIST_PGF_OFFSET);
+        if (rt_ptr->va == va)
+            return rt_ptr;
+        ptr = ptr->next;
+    }
+    rt_ptr = NULL;
+    return rt_ptr;
+}
+
+//------------------------------------- Shared Page Management -------------------------------------
 
 uintptr_t shm_page_get(int key)
 {

@@ -28,6 +28,7 @@
 
 #include <os/sched.h>
 #include <os/list.h>
+#include <os/kernel.h>
 #include <type.h>
 #include <pgtable.h>
 
@@ -43,32 +44,68 @@
 #define ROUNDDOWN(a, n) (((uint64_t)(a)) & ~((n)-1))
 
 /* [p4] page-frame management */
-#define NUM_MAX_PGFRAME     200
+#define NUM_MAX_PHYPAGE     5
+#define NUM_MAX_SWPPAGE     1024
 #define LIST_PGF_OFFSET     16
 #define PCBLIST_PGF_OFFSET  32
 
-extern int free_page_num;
+extern int free_page_num, free_swp_page_num;
 
 typedef enum{
     UNPINNED,
     PINNED
 }pf_type_t;
 
-typedef struct pgf{
-    uint64_t    kva;                            // to some degrees, it's the physical frame
-    uint64_t    va;                             // virtual frame
-    list_node_t list;
+/************************************************
+    [p4]:
+        for managing physical page frame.
+    to some degrees, it's for managing the
+    physical memory space.
+*************************************************/
+typedef struct phy_pg{
+    uint64_t    kva;                            // to some degrees, it's the physical frame addr
+    uint64_t    va;                             // virtual frame addr
+    list_node_t list;                           // link in used_queue (pinned & unpinned)
     list_node_t pcb_list;                       // pcb_list is used for the frame list in every pcb (may be of use when recycling)
+    pcb_t       *user_pcb;
     pid_t       user_pid;
-}pgf_t;
-extern pgf_t pf[NUM_MAX_PGFRAME];
+}phy_pg_t;
+extern phy_pg_t pf[NUM_MAX_PHYPAGE];
 extern list_head free_pf, pinned_used_pf, unpinned_used_pf;
+
+/************************************************
+    [p4] About swap:
+        when start a new process, we load the
+    pages into the swap area as a copy. When
+    facing swap-situation, we directly load/store
+    the page into the corresponding position on
+    the disk.
+*************************************************/
+
+// [p4] for managing the pages on the disk
+typedef struct swp_pg{
+    uint64_t    start_sector;                   // start_sector in swap area on the disk
+    uint64_t    va;                             // virtual frame addr
+    list_node_t list;                           // link in swp_queue
+    list_node_t pcb_list;
+    pcb_t       *user_pcb;
+    pid_t       user_pid;
+}swp_pg_t;
+extern swp_pg_t sf[NUM_MAX_SWPPAGE];
+extern list_head free_sf, used_sf;
+extern uint64_t swap_start_offset, swap_start_sector;
 
 extern ptr_t allocPage(int numPage);
 extern ptr_t allocPage_from_freePF(int type, pcb_t *pcb_ptr, uint64_t va);
 extern void init_page();
 extern void recycle_pages(pcb_t *pcb_ptr);
-extern void copy_ker_pgdir(uint64_t dest_pgdir);
+extern void allocPage_from_freeSF(pcb_t *pcb_ptr, uint64_t va);
+extern void swap_in(swp_pg_t *in_page);
+extern void swap_out(phy_pg_t *out_page);
+extern void transfer_page_p2s(uint64_t phy_addr, uint64_t start_sector);
+extern void transfer_page_s2p(uint64_t phy_addr, uint64_t start_sector);
+extern swp_pg_t *query_swp_page(uint64_t va, pcb_t *pcb_ptr);
+extern void unmap(uint64_t va, uint64_t pgdir);
 
 // TODO [P4-task1] */
 void freePage(ptr_t baseAddr);

@@ -109,6 +109,14 @@ static void init_task_info(void)
 
     task_info_ptr = (task_info_t *)(tmp_app_info_addr + app_info_offset - SECTOR_SIZE * task_info_sec_id);
     memcpy((uint8_t *)tasks, (uint8_t *)task_info_ptr, task_num * sizeof(task_info_t));
+
+    // [p4] get swap area location
+    for (int i = 0; i < task_num; i++){
+        if (tasks[i].offset + tasks[i].size > swap_start_offset)
+            swap_start_offset = tasks[i].offset + tasks[i].size;
+    }
+    swap_start_sector = NBYTES2SEC(swap_start_offset);
+    swap_start_offset = swap_start_sector * SECTOR_SIZE;
 }
 
 /************************************************************/

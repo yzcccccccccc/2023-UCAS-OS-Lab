@@ -40,7 +40,10 @@ uint64_t load_task_img(char *taskname, pcb_t *pcb_ptr)
                 if (st_kva == 0)
                     st_kva = kva;
                 unsigned int cur_sec_to_read = (sec_to_read > 8) ? 8 : sec_to_read;
+                // load a page into physical memory
                 bios_sd_read((unsigned int)kva2pa(kva), cur_sec_to_read, cur_sec_id);
+                // set up the map on the swap area
+                allocPage_from_freeSF(pcb_ptr, get_vf(va));
             }
 
             //bios_sd_read(task_addr, occ_sec_num, st_sec_id);        // rough transporting!

@@ -61,7 +61,16 @@ void handle_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scause){
     }      
     else{
         uint64_t pgdir = current_running[cpuid]->pgdir;
-        alloc_page_helper(stval, pgdir, current_running[cpuid]);
+        uint64_t va = get_vf(stval);                        // belongs to which virtual frame?
+        swp_pg_t *swp_pg_ptr = query_swp_page(va, current_running[cpuid]);
+
+        if (swp_pg_ptr == NULL){                            // not in swap area
+            alloc_page_helper(stval, pgdir, current_running[cpuid]);        // alloc a physical page
+            allocPage_from_freeSF(current_running[cpuid], stval);           // copy to swap area
+        }
+        else{                                               // in the swap area, just swap in
+            swap_in(swp_pg_ptr);
+        }
     }
     return;
 }

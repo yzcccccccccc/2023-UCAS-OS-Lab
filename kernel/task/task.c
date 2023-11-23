@@ -96,7 +96,7 @@ pid_t init_pcb_vname(char *name, int argc, char *argv[]){
     // [p4] allocate the pgdir
     if (pcb_new->status == TASK_UNUSED){       // first allocated
         pgdir = allocPage(1);                  // directly alloc, cause this is root page table, may be reused
-        copy_ker_pgdir(pgdir);
+        share_pgtable(pgdir, pa2kva(PGDIR_PA));
         pcb_new->pgdir = pgdir;
     }
     else
@@ -105,8 +105,9 @@ pid_t init_pcb_vname(char *name, int argc, char *argv[]){
     // [p3] wait_list init
     pcb_new->wait_list.next = pcb_new->wait_list.prev = &(pcb_new->wait_list);
 
-    // [p4] pf_list init
+    // [p4] pf_list & sf_list init
     pcb_new->pf_list.next = pcb_new->pf_list.prev = &(pcb_new->pf_list);
+    pcb_new->sf_list.next = pcb_new->sf_list.prev = &(pcb_new->sf_list);
 
     // [p4] pid
     pid_n++;
@@ -129,6 +130,7 @@ pid_t init_pcb_vname(char *name, int argc, char *argv[]){
         // alloc a page for user stack
         pcb_new->user_sp = pcb_new->user_stack_base = USER_STACK_ADDR;
         user_stack_kva = alloc_page_helper(USER_STACK_ADDR - NORMAL_PAGE_SIZE, pgdir, pcb_new) + NORMAL_PAGE_SIZE;
+        allocPage_from_freeSF(pcb_new, get_vf(USER_STACK_ADDR - NORMAL_PAGE_SIZE));
        
         pcb_new->status = TASK_READY;
         pcb_new->cursor_x = pcb_new->cursor_y = 0;
