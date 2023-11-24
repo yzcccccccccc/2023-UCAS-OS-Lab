@@ -279,18 +279,18 @@ int main(void)
         bios_set_timer(get_ticks() + TIMER_INTERVAL);
 
         // [p3-multicore] wakeup sub core :P
-        wakeup_other_hart();
+        //wakeup_other_hart();
 
         // [p4-unmap] cancel the map of 0x50200000 ~ 0x51000000, done by sub-core
-        spin_lock_init(&unmap_sync_lock);
-        spin_lock_try_acquire(&unmap_sync_lock);            // lock, wait core1 unlock it
-        spin_lock_acquire(&unmap_sync_lock);
-        lock_kernel();
-        //unmap_boot();
+        //spin_lock_init(&unmap_sync_lock);
+        //spin_lock_try_acquire(&unmap_sync_lock);            // lock, wait core1 unlock it
+        //spin_lock_acquire(&unmap_sync_lock);
+        //lock_kernel();
+        unmap_boot();
         printk("> [INIT] Unmap boot_addr succeeded. :D\n");
 
         printk("> [INIT] Main core initialization succeeded. :D\n");
-        unlock_kernel();
+        //unlock_kernel();
 
         // Infinite while loop, where CPU stays in a low-power state (QAQQQQQQQQQQQ)
         while (1)

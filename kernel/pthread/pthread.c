@@ -60,9 +60,6 @@ pid_t pthread_create(uint64_t entry_addr, void *arg){
     pcb_new->par = current_running[cpuid];
     // cpu
     pcb_new->mask = current_running[cpuid]->mask;
-    // status
-    pcb_new->status = TASK_READY;
-    list_insert(&ready_queue, &(pcb_new->list));
     // list
     pcb_new->wait_list.next = pcb_new->wait_list.prev = &(pcb_new->wait_list);
     pcb_new->pf_list.next = pcb_new->pf_list.prev = &(pcb_new->pf_list);
@@ -88,6 +85,11 @@ pid_t pthread_create(uint64_t entry_addr, void *arg){
 
     // Step4: init stack
     init_tcb(kernel_stack_kva, user_stack_uva, entry_addr, pcb_new, arg);
+
+    // Step5: READY!
+    // status
+    pcb_new->status = TASK_READY;
+    list_insert(&ready_queue, &(pcb_new->list));
 
     return pid_n;
 }

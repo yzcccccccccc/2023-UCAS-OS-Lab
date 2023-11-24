@@ -4,13 +4,13 @@
 #include <unistd.h>
 
 uint64_t secPage_ptr = SECURITY_BASE;
-int secPage_mlock_handle = 0;
+int secPage_mlock_handle = -1;
 
 // [p4-task3]
 uint64_t copy_argv_to_secPage(char **argv, int argc){
-    if (!secPage_mlock_handle){            // init the lock!
+    if (secPage_mlock_handle == -1){            // init the lock!
         int cur_pid = sys_getpid();
-        secPage_mlock_handle = sys_mutex_init(cur_pid);
+        secPage_mlock_handle = sys_mutex_init(cur_pid + MAGIC_NUM);
     }
 
     sys_mutex_acquire(secPage_mlock_handle);
@@ -29,9 +29,9 @@ uint64_t copy_argv_to_secPage(char **argv, int argc){
 
 // [p4-task3]
 uint64_t copy_str_to_secPage(char *str){
-    if (!secPage_mlock_handle){            // init the lock!
+    if (secPage_mlock_handle == -1){            // init the lock!
         int cur_pid = sys_getpid();
-        secPage_mlock_handle = sys_mutex_init(cur_pid);
+        secPage_mlock_handle = sys_mutex_init(cur_pid + MAGIC_NUM);
     }
 
     sys_mutex_acquire(secPage_mlock_handle);

@@ -5,6 +5,7 @@
 
 // [p4-task3]
 #define SECURITY_BASE 0x5000
+#define MAGIC_NUM     114514
 #define RESET_SECPAGE_PTR (secPage_ptr = SECURITY_BASE)
 
 extern uint64_t secPage_ptr;
