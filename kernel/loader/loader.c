@@ -36,7 +36,7 @@ uint64_t load_task_img(char *taskname, pcb_t *pcb_ptr)
             for (int sec_to_read = occ_sec_num, cur_sec_id = st_sec_id; 
                     sec_to_read > 0; 
                     sec_to_read -= 8, va += 0x1000, cur_sec_id += 8){
-                kva = alloc_page_helper(va, pgdir, pcb_ptr, UNPINNED);
+                kva = alloc_page_helper(va, pgdir, pcb_ptr, PF_UNPINNED);
                 if (st_kva == 0)
                     st_kva = kva;
                 unsigned int cur_sec_to_read = (sec_to_read > 8) ? 8 : sec_to_read;

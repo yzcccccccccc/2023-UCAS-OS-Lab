@@ -132,11 +132,11 @@ pid_t init_pcb_vname(char *name, int argc, char *argv[]){
 
         // [p4] alloc a page for user stack
         pcb_new->user_sp = pcb_new->user_stack_base = USER_STACK_ADDR;
-        user_stack_kva = alloc_page_helper(USER_STACK_ADDR - NORMAL_PAGE_SIZE, pgdir, pcb_new, UNPINNED) + NORMAL_PAGE_SIZE;
+        user_stack_kva = alloc_page_helper(USER_STACK_ADDR - NORMAL_PAGE_SIZE, pgdir, pcb_new, PF_UNPINNED) + NORMAL_PAGE_SIZE;
         allocPage_from_freeSF(pcb_new, get_vf(USER_STACK_ADDR - NORMAL_PAGE_SIZE));
 
         // [p4] alloc a security page
-        alloc_page_helper(SECURITY_BASE, pgdir, pcb_new, PINNED);
+        alloc_page_helper(SECURITY_BASE, pgdir, pcb_new, PF_PINNED);
         allocPage_from_freeSF(pcb_new, SECURITY_BASE);
        
         pcb_new->status = TASK_READY;

@@ -114,10 +114,11 @@ void exec(){
         tmp_cur = 0;
         while (buffer[cur] != ' ' && cur < buffer_len){
             arg[arg_num][tmp_cur] = buffer[cur];
-            argv[arg_num] = (char *)(arg[arg_num]);
             cur++;
             tmp_cur++;
         }
+        arg[arg_num][tmp_cur] = '\0';
+        argv[arg_num] = (char *)(arg[arg_num]);
         arg_num++;
     }
 

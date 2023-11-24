@@ -52,8 +52,9 @@
 extern int free_page_num, free_swp_page_num;
 
 typedef enum{
-    UNPINNED,
-    PINNED
+    PF_UNPINNED,
+    PF_PINNED,
+    PF_UNUSED
 }pf_type_t;
 
 /************************************************
@@ -69,6 +70,7 @@ typedef struct phy_pg{
     list_node_t pcb_list;                       // pcb_list is used for the frame list in every pcb (may be of use when recycling)
     pcb_t       *user_pcb;
     pid_t       user_pid;
+    pf_type_t   type;
 }phy_pg_t;
 extern phy_pg_t pf[NUM_MAX_PHYPAGE];
 extern list_head free_pf, pinned_used_pf, unpinned_used_pf;

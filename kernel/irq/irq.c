@@ -29,6 +29,10 @@ void interrupt_helper(regs_context_t *regs, uint64_t stval, uint64_t scause)
     }
 
     handler(regs, stval, scause);
+
+    // [p4]
+    local_flush_tlb_all();
+    local_flush_icache_all();
 }
 
 void handle_irq_timer(regs_context_t *regs, uint64_t stval, uint64_t scause)
@@ -65,8 +69,8 @@ void handle_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scause){
         swp_pg_t *swp_pg_ptr = query_swp_page(va, current_running[cpuid]);
 
         if (swp_pg_ptr == NULL){                            // not in swap area
-            alloc_page_helper(stval, pgdir, current_running[cpuid], UNPINNED);        // alloc a physical page
-            allocPage_from_freeSF(current_running[cpuid], stval);           // copy to swap area
+            alloc_page_helper(stval, pgdir, current_running[cpuid], PF_UNPINNED);        // alloc a physical page
+            allocPage_from_freeSF(current_running[cpuid], stval);                     // copy to swap area
         }
         else{                                               // in the swap area, just swap in
             swap_in(swp_pg_ptr);

@@ -41,6 +41,7 @@ void init_page(){
     for (int i = 0; i < NUM_MAX_PHYPAGE; i++){
         pf[i].kva       = allocPage(1);
         pf[i].user_pid  = -1;                    // -1 means unallocated
+        pf[i].type      = PF_UNUSED;
         list_insert(&free_pf, &pf[i].list);
     }
 
@@ -66,7 +67,7 @@ retry:
         pf_ptr = (phy_pg_t *)((void *)pf_list_ptr - LIST_PGF_OFFSET);
         
         // insert into used_queue
-        if (type == PINNED)
+        if (type == PF_PINNED)
             list_insert(&pinned_used_pf, pf_list_ptr);
         else
             list_insert(&unpinned_used_pf, pf_list_ptr);
@@ -78,6 +79,7 @@ retry:
         pf_ptr->va          = get_vf(va & VA_MASK);
         pf_ptr->user_pcb    = pcb_ptr;
         pf_ptr->user_pid    = pcb_ptr->pid;
+        pf_ptr->type        = type;
 
         free_page_num--;
     }
@@ -137,6 +139,7 @@ void recycle_pages(pcb_t *pcb_ptr){
         pf_node->va = 0;
         pf_node->user_pid = -1;
         pf_node->user_pcb = NULL;
+        pf_node->type     = PF_UNUSED;
         
         // remove from the used_queue & insert free_pf queue
         list_delete(&pf_node->list);
@@ -297,7 +300,7 @@ void swap_in(swp_pg_t *in_page){
     // First: find a available physical page
     pcb_t *pcb_ptr = in_page->user_pcb;
     uint64_t va = in_page->va;
-    uint64_t alloc_kva = alloc_page_helper(va, pcb_ptr->pgdir, pcb_ptr, UNPINNED);
+    uint64_t alloc_kva = alloc_page_helper(va, pcb_ptr->pgdir, pcb_ptr, PF_UNPINNED);
 
     // Second: transfer!
     uint64_t phy_addr = kva2pa(alloc_kva);
