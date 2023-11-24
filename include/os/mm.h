@@ -108,6 +108,7 @@ extern void transfer_page_p2s(uint64_t phy_addr, uint64_t start_sector);
 extern void transfer_page_s2p(uint64_t phy_addr, uint64_t start_sector);
 extern swp_pg_t *query_swp_page(uint64_t va, pcb_t *pcb_ptr);
 extern void unmap(uint64_t va, uint64_t pgdir);
+extern uint64_t map(uint64_t va, uint64_t kva, uint64_t pgdir);
 
 // TODO [P4-task1] */
 void freePage(ptr_t baseAddr);
@@ -148,11 +149,35 @@ extern uint64_t do_security_page_rl(uint64_t va);
     coincides to pass a pointer arg, and the content of the pointer is in the usr_pg.
     So after core 0 unlcoks the kernel, core 1 enters the kernel and try to parse the
     content of the pointer, then a page-fault happens.
+    
+    2023.11.23
         to sovle this situation, I try to use a special page, namely 'security page',
     which is allocated to user at uva 0x5000 when create a process. we use this
     pinned page to pass the pointer args' content.
+        (abandoned)
+
+    2023.11.24
+        fucking complex when encountering threads... (sevral threads may share the 
+    same security page, leading to a sync problem). So I decide to put the security
+    page in the kernel. First, allocate a unrecycable page (allocPage) for temporarity
+    save the syscall args. Let's call it the 'arg_page'.  When user triggers a syscall 
+    and traps into the kernel, check the presence of the args. If not, load the page
+    into the kernel security page, copy the data from the security page to arg_page.
+
+    2023.11.24
+        fuck. I give up.... too many situations(what if part of the string in page A,
+    while the rest in page B blablabla...). Finally I decide to use a mutex lock to
+    protect the security page...
 **************************************************************************************/
 
 #define SECURITY_BASE   0x5000
+
+#define RESET_ARG_PAGE_PTR (arg_page_ptr = arg_page_base)
+extern uint64_t arg_page_ptr, arg_page_base;
+extern phy_pg_t security_page1, security_page2;
+
+extern void swap_in_toSecurity(swp_pg_t *in_page, phy_pg_t *security_page);
+extern uint64_t copy_argv_to_secPage(char **argv, int argc);
+extern uint64_t copy_str_to_secPage(char *str);
 
 #endif /* MM_H */

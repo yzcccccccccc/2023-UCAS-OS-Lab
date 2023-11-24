@@ -107,9 +107,14 @@ void sys_thread_yield()
     invoke_syscall(SYSCALL_THREAD_YIELD, 0, 0, 0, 0, 0);
 }
 
-void sys_thread_create(uint64_t entry_addr, uint64_t arg){
-    /* [p2-task5] thread_create*/
-    invoke_syscall(SYSCALL_THREAD_CREATE, entry_addr, arg, 0, 0, 0);
+int sys_thread_create(uint64_t entry_addr, void *arg){
+    /* [p2-task5 & p4-task4] thread_create*/
+    return invoke_syscall(SYSCALL_THREAD_CREATE, entry_addr, (long)arg, 0, 0, 0);
+}
+
+int sys_thread_join(int thread_id){
+    /* [p5-task4] */
+    return invoke_syscall(SYSCALL_THREAD_JOIN, (long)thread_id, 0, 0, 0, 0);
 }
 
 void sys_clear(){

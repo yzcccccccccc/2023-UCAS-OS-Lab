@@ -88,8 +88,12 @@ typedef struct pcb
     list_head pf_list;      // [p4] allocated physical pageframes
     list_head sf_list;      // [p4] allocated swap pageframes
 
-    /* Thread id */         // <- mark as the 'thread group'
-    pid_t tid;
+    /* Thread id */
+    int tid;                // id in thread-group
+
+    /* MAIN_THREAD | SUB_THREAD*/
+    struct pcb *par;
+    thread_type_t thread_type;
 
     /* process id */
     pid_t pid;
@@ -100,9 +104,6 @@ typedef struct pcb
 
     /* BLOCK | READY | RUNNING */
     task_status_t status;
-
-    /* MAIN_THREAD | SUB_THREAD*/
-    thread_type_t thread_type;
 
     /* cursor position */
     int cursor_x;

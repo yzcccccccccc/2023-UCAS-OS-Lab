@@ -52,6 +52,11 @@ void init_page(){
         sf[i].user_pid      = -1;
         list_insert(&free_sf, &sf[i].list);
     }
+
+    // security page
+    //arg_page_base = arg_page_ptr = allocPage(1);
+    //security_page1.kva = allocPage(1);
+    //security_page2.kva = allocPage(1);
 }
 
 //------------------------------------- Physical Page Management -------------------------------------
@@ -187,10 +192,45 @@ void unmap(uint64_t va, uint64_t pgdir){
                     (vpn1 << PPN_BITS) ^
                     (va >> (NORMAL_PAGE_SHIFT));
     PTE *pmd2 = (PTE *)pgdir;
+    if (!pmd2[vpn2])    return;
     PTE *pmd1 = (PTE *)pa2kva(get_pa(pmd2[vpn2]));
+    if (!pmd1[vpn1])    return;
     PTE *pmd0 = (PTE *)pa2kva(get_pa(pmd1[vpn1]));
     pmd0[vpn0] = 0;
     return;
+}
+
+// [p4-task1] map virtual frame va into physical frame kva
+uint64_t map(uint64_t va, uint64_t kva, uint64_t pgdir){
+    va &= VA_MASK;
+
+    //--------------------------------get VPN bits--------------------------------
+    uint64_t vpn2 = va >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS);
+    uint64_t vpn1 = (vpn2 << PPN_BITS) ^
+                    (va >> (NORMAL_PAGE_SHIFT + PPN_BITS));
+    uint64_t vpn0 = (vpn2 << (2 * PPN_BITS)) ^
+                    (vpn1 << PPN_BITS) ^
+                    (va >> (NORMAL_PAGE_SHIFT));
+
+    //--------------------------------aloc PTE--------------------------------
+    PTE *pmd2 = (PTE *)pgdir;
+    if (!(pmd2[vpn2] & _PAGE_PRESENT)){
+        set_pfn(&pmd2[vpn2], kva2pa(allocPage(1)) >> NORMAL_PAGE_SHIFT);
+        set_attribute(&pmd2[vpn2], _PAGE_PRESENT | _PAGE_USER);
+        clear_pgdir(pa2kva(get_pa(pmd2[vpn2])));
+    }
+    PTE *pmd1 = (PTE *)pa2kva(get_pa(pmd2[vpn2]));
+    if (!(pmd1[vpn1] & _PAGE_PRESENT)){
+        set_pfn(&pmd1[vpn1], kva2pa(allocPage(1)) >> NORMAL_PAGE_SHIFT);
+        set_attribute(&pmd1[vpn1], _PAGE_PRESENT | _PAGE_USER);
+        clear_pgdir(pa2kva(get_pa(pmd1[vpn1])));
+    }
+    PTE *pmd0 = (PTE *)pa2kva(get_pa(pmd1[vpn1]));
+    if (!(pmd0[vpn0] & _PAGE_PRESENT)){
+        set_pfn(&pmd0[vpn0], kva2pa(kva) >> NORMAL_PAGE_SHIFT);
+        set_attribute(&pmd0[vpn0], _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC | _PAGE_ACCESSED | _PAGE_DIRTY | _PAGE_USER);
+    }
+    return pa2kva(get_pa(pmd0[vpn0]));
 }
 
 void freePage(ptr_t baseAddr)
@@ -344,6 +384,50 @@ swp_pg_t *query_swp_page(uint64_t va, pcb_t *pcb_ptr){
     rt_ptr = NULL;
     return rt_ptr;
 }
+
+//------------------------------------- Security Page Management -------------------------------------
+uint64_t arg_page_ptr, arg_page_base;
+phy_pg_t security_page1, security_page2;
+/*
+// [p4-task3]
+uint64_t check_exist(uint64_t addr, uint64_t pgdir, phy_pg_t *security_page){
+    if (!get_kva_v(addr, pgdir)){           // not exist ...
+
+    }
+}
+
+// [p4-task3] swap in a page to the security_page
+void swap_in_toSecurity(swp_pg_t *in_page, phy_pg_t *security_page){
+    uint64_t kva = security_page->kva;
+    transfer_page_s2p(kva2pa(kva), in_page->start_sector);
+}
+
+// [p4-task3]
+uint64_t copy_argv_to_secPage(char **argv, int argc){
+    int cpuid = get_current_cpu_id();
+    uint64_t pgdir = current_running[cpuid]->pgdir;
+    swp_pg_t *target_page;
+
+    // Step1: allocate space for *argv[]
+    char **rt_argv = (char **)arg_page_ptr;
+    arg_page_ptr += sizeof(uint64_t) * argc;
+
+    // Step2: check existence of argv
+
+
+    // Step3: copy!
+    for (int i = 0, len; i < argc; i++){
+
+    }
+
+}
+
+// [p4-task3]
+uint64_t copy_str_to_secPage(char *str){
+
+}
+
+*/
 
 //------------------------------------- Shared Page Management -------------------------------------
 

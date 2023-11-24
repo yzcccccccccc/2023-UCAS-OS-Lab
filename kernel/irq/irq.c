@@ -47,7 +47,16 @@ void handle_irq_timer(regs_context_t *regs, uint64_t stval, uint64_t scause)
     handle page fault, also handle the stack overflow here (core dumped)
     User Stack Location:
     ----------------------------------------------------
-    0xf00010000 ----------------------------------------
+                    ...
+    0xf00014000 ---------------------------------------- > Sub thread 2 (tid2)
+                        Sub stack area (4KB)
+    0xf00013000 ----------------------------------------
+                        Critical area (4KB)
+    0xf00012000 ---------------------------------------- > Sub thread 1 (tid1)
+                        Sub stack area (4KB)
+    0xf00011000 ----------------------------------------
+                        Critical area (4KB)
+    0xf00010000 ---------------------------------------- > main thread (tid0)
                         User Stack Area (8KB)
     0xf0000e000 ----------------------------------------
                         Critical Area (4KB)

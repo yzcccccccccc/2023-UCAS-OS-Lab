@@ -92,7 +92,7 @@ pid_t init_pcb_vname(char *name, int argc, char *argv[]){
         }
     }
     if (!alloc_pcb_idx)
-        return 0;               // allocated fail.
+        return 0;               // allocate fail.
 
     pcb_t* pcb_new = pcb + alloc_pcb_idx;
     uint64_t pgdir = 0;
@@ -143,7 +143,8 @@ pid_t init_pcb_vname(char *name, int argc, char *argv[]){
         pcb_new->cursor_x = pcb_new->cursor_y = 0;
 
         // for thread
-        pcb_new->tid = pcb_new->pid;
+        pcb_new->tid = 0;
+        pcb_new->par = NULL;
         pcb_new->thread_type = MAIN_THREAD;
 
         // [p3] CPU mask

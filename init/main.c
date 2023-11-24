@@ -10,7 +10,7 @@
 #include <os/string.h>
 #include <os/mm.h>
 #include <os/time.h>
-#include <os/_thread.h>
+#include <os/pthread.h>
 #include <os/cmd.h>
 #include <os/sync.h>
 #include <os/smp.h>
@@ -157,8 +157,8 @@ static void init_syscall(void)
     syscall[SYSCALL_LOCK_INIT]          = (long (*)())do_mutex_lock_init;
     syscall[SYSCALL_LOCK_ACQ]           = (long (*)())do_mutex_lock_acquire;
     syscall[SYSCALL_LOCK_RELEASE]       = (long (*)())do_mutex_lock_release;
-    syscall[SYSCALL_THREAD_CREATE]      = (long (*)())thread_create;
-    syscall[SYSCALL_THREAD_YIELD]       = (long (*)())thread_yield;
+    syscall[SYSCALL_THREAD_CREATE]      = (long (*)())pthread_create;
+    syscall[SYSCALL_THREAD_JOIN]        = (long (*)())pthread_join;
 
     syscall[SYSCALL_CURSOR_C]           = (long (*)())screen_move_cursor_c;
     syscall[SYSCALL_READCH]             = (long (*)())bios_getchar;
