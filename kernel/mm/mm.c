@@ -1,5 +1,7 @@
 #include <os/mm.h>
 #include <os/smp.h>
+#include <printk.h>
+#include <os/time.h>
 
 #define PAGE_OCC_SEC    8           // 4KB = 8 * 512B
 
@@ -62,7 +64,7 @@ void init_page(){
 //------------------------------------- Physical Page Management -------------------------------------
 
 // [p4] allocate 1 page from free_pf (list) for pcb, return kva of the page, type  PINNED or UNPINNED
-ptr_t allocPage_from_freePF(int type, pcb_t *pcb_ptr, uint64_t va){
+ptr_t allocPage_from_freePF(int type, pcb_t *pcb_ptr, uint64_t va, uint64_t attribute){
     list_node_t *pf_list_ptr;
     phy_pg_t *pf_ptr = NULL;
 
@@ -85,6 +87,7 @@ retry:
         pf_ptr->user_pcb    = pcb_ptr;
         pf_ptr->user_pid    = pcb_ptr->pid;
         pf_ptr->type        = type;
+        pf_ptr->attribute   = attribute;
 
         free_page_num--;
     }
@@ -200,6 +203,7 @@ void unmap(uint64_t va, uint64_t pgdir){
     return;
 }
 
+/*
 // [p4-task1] map virtual frame va into physical frame kva
 uint64_t map(uint64_t va, uint64_t kva, uint64_t pgdir){
     va &= VA_MASK;
@@ -231,7 +235,7 @@ uint64_t map(uint64_t va, uint64_t kva, uint64_t pgdir){
         set_attribute(&pmd0[vpn0], _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC | _PAGE_ACCESSED | _PAGE_DIRTY | _PAGE_USER);
     }
     return pa2kva(get_pa(pmd0[vpn0]));
-}
+}*/
 
 void freePage(ptr_t baseAddr)
 {
@@ -263,10 +267,11 @@ void share_pgtable(uintptr_t dest_pgdir, uintptr_t src_pgdir)
     [p4]
     map va (allocate a physical pageframe) into pagetable pgdir, and this page belongs to pcb_ptr
 **************************************************************************************************/
-uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, pcb_t *pcb_ptr, int type)
+uintptr_t alloc_page_helper(uintptr_t va, pcb_t *pcb_ptr, int type, uint64_t attribute)
 {
     // TODO [P4-task1] alloc_page_helper:
     va &= VA_MASK;
+    uint64_t pgdir = pcb_ptr->pgdir;
 
     //--------------------------------get VPN bits--------------------------------
     uint64_t vpn2 = va >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS);
@@ -299,8 +304,8 @@ uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, pcb_t *pcb_ptr, int t
         /********************************************************************
                 allocate a real physical page for the va
         *********************************************************************/
-        set_pfn(&pmd0[vpn0], kva2pa(allocPage_from_freePF(type, pcb_ptr, va)) >> NORMAL_PAGE_SHIFT);
-        set_attribute(&pmd0[vpn0], _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC | _PAGE_ACCESSED | _PAGE_DIRTY | _PAGE_USER);
+        set_pfn(&pmd0[vpn0], kva2pa(allocPage_from_freePF(type, pcb_ptr, va, attribute)) >> NORMAL_PAGE_SHIFT);
+        set_attribute(&pmd0[vpn0], _PAGE_PRESENT | _PAGE_USER | attribute);
     }
     return pa2kva(get_pa(pmd0[vpn0]));
 }
@@ -318,7 +323,7 @@ void transfer_page_s2p(uint64_t phy_addr, uint64_t start_sector){
 }
 
 // [p4-task3] alloc a page on the disk for virtual frame va
-void allocPage_from_freeSF(pcb_t *pcb_ptr, uint64_t va){
+void allocPage_from_freeSF(pcb_t *pcb_ptr, uint64_t va, uint64_t attribute){
     va = get_vf(va & VA_MASK);
     list_node_t *sf_list_ptr = list_pop(&free_sf);
     swp_pg_t *sf_node = (swp_pg_t *)((void *)sf_list_ptr - LIST_PGF_OFFSET);
@@ -327,6 +332,7 @@ void allocPage_from_freeSF(pcb_t *pcb_ptr, uint64_t va){
     sf_node->va = va;
     sf_node->user_pcb = pcb_ptr;
     sf_node->user_pid = pcb_ptr->pid;
+    sf_node->attribute = attribute;
     list_insert(&(pcb_ptr->sf_list), &(sf_node->pcb_list));
     list_insert(&(used_sf), &(sf_node->list));
 
@@ -337,10 +343,14 @@ void allocPage_from_freeSF(pcb_t *pcb_ptr, uint64_t va){
 
 // [p4-task3] swap in the swap-area page
 void swap_in(swp_pg_t *in_page){
+    // debug
+    //printl("[ticks: %ld][core %d] swap in page (va: %lx, pid: %d)\n", get_ticks(), get_current_cpu_id(), in_page->va, in_page->user_pcb->pid);
+
     // First: find a available physical page
     pcb_t *pcb_ptr = in_page->user_pcb;
     uint64_t va = in_page->va;
-    uint64_t alloc_kva = alloc_page_helper(va, pcb_ptr->pgdir, pcb_ptr, PF_UNPINNED);
+    uint64_t attribute = in_page->attribute;
+    uint64_t alloc_kva = alloc_page_helper(va, pcb_ptr, PF_UNPINNED, attribute);
 
     // Second: transfer!
     uint64_t phy_addr = kva2pa(alloc_kva);
@@ -349,11 +359,13 @@ void swap_in(swp_pg_t *in_page){
 
 // [p4-task3] swap out a physical page (write_back = 1: dirty, write to the swap area)
 void swap_out(phy_pg_t *out_page){
+    // debug
+    //printl("[ticks: %ld][core %d] swap out page (va: %lx, kva: %lx, pid: %d)\n", get_ticks(), get_current_cpu_id(), out_page->va, out_page->kva, out_page->user_pcb->pid);
     uint64_t va = out_page->va & VA_MASK;
     uint64_t pgdir = out_page->user_pcb->pgdir;
 
     pcb_t *pcb_ptr = out_page->user_pcb;
-    if (pcb_ptr->par != NULL)   pcb_ptr = pcb_ptr->par;                 // main thread manages all the physical frame, while sub thread only manages the user stack
+    if (pcb_ptr->par != NULL)   pcb_ptr = pcb_ptr->par;                 // main_thread manages all the physical frame, while sub thread only manages the user stack
 
     // First: write back (optional)
     bool write_back = get_attribute(get_PTE_va(va, pgdir), _PAGE_DIRTY);
@@ -368,7 +380,7 @@ void swap_out(phy_pg_t *out_page){
     out_page->user_pid = -1;
     out_page->user_pcb = NULL;
     out_page->va = 0;
-    list_delete(&(pcb_ptr->pf_list));
+    list_delete(&(out_page->pcb_list));
     list_insert(&free_pf, &(out_page->list));
     free_page_num++;
     return;

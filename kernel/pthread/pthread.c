@@ -79,9 +79,10 @@ pid_t pthread_create(uint64_t entry_addr, void *arg){
     uint64_t kernel_stack_kva = pcb_new->kernel_sp;
     // User stack
     uint64_t user_stack_uva = USER_STACK_ADDR + NORMAL_PAGE_SIZE * pcb_new->tid * 2;
+    uint64_t attribute = _PAGE_ACCESSED | _PAGE_DIRTY | _PAGE_READ | _PAGE_WRITE;
     pcb_new->user_sp = pcb_new->user_stack_base = user_stack_uva;
-    alloc_page_helper(user_stack_uva - NORMAL_PAGE_SIZE, pcb_new->pgdir, pcb_new, PF_UNPINNED);
-    allocPage_from_freeSF(pcb_new, get_vf(user_stack_uva - NORMAL_PAGE_SIZE));
+    alloc_page_helper(user_stack_uva - NORMAL_PAGE_SIZE, pcb_new, PF_UNPINNED, attribute);
+    allocPage_from_freeSF(pcb_new, get_vf(user_stack_uva - NORMAL_PAGE_SIZE), attribute);
 
     // Step4: init stack
     init_tcb(kernel_stack_kva, user_stack_uva, entry_addr, pcb_new, arg);

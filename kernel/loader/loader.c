@@ -32,18 +32,19 @@ uint64_t load_task_img(char *taskname, pcb_t *pcb_ptr)
             occ_sec_num = NBYTES2SEC(task_offset + task_memsz) - st_sec_id;
 
             // load the img every 4KB
-            uint64_t va = task_addr, kva, st_kva = 0;
+            uint64_t va = task_addr, kva, st_kva = 0, attribute;
             for (int sec_to_read = occ_sec_num, cur_sec_id = st_sec_id; 
                     sec_to_read > 0; 
                     sec_to_read -= 8, va += 0x1000, cur_sec_id += 8){
-                kva = alloc_page_helper(va, pgdir, pcb_ptr, PF_UNPINNED);
+                attribute = _PAGE_ACCESSED | _PAGE_DIRTY | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC;
+                kva = alloc_page_helper(va, pcb_ptr, PF_UNPINNED, attribute);
                 if (st_kva == 0)
                     st_kva = kva;
                 unsigned int cur_sec_to_read = (sec_to_read > 8) ? 8 : sec_to_read;
                 // load a page into physical memory
                 bios_sd_read((unsigned int)kva2pa(kva), cur_sec_to_read, cur_sec_id);
                 // set up the map on the swap area
-                allocPage_from_freeSF(pcb_ptr, get_vf(va));
+                allocPage_from_freeSF(pcb_ptr, get_vf(va), attribute);
             }
 
             //bios_sd_read(task_addr, occ_sec_num, st_sec_id);        // rough transporting!

@@ -70,7 +70,8 @@ typedef struct phy_pg{
     list_node_t pcb_list;                       // pcb_list is used for the frame list in every pcb (may be of use when recycling)
     pcb_t       *user_pcb;
     pid_t       user_pid;
-    pf_type_t   type;
+    uint64_t    attribute;
+    pf_type_t   type;                           // pinned, unpinned, unused
 }phy_pg_t;
 extern phy_pg_t pf[NUM_MAX_PHYPAGE];
 extern list_head free_pf, pinned_used_pf, unpinned_used_pf;
@@ -92,23 +93,24 @@ typedef struct swp_pg{
     list_node_t pcb_list;
     pcb_t       *user_pcb;
     pid_t       user_pid;
+    uint64_t    attribute;
 }swp_pg_t;
 extern swp_pg_t sf[NUM_MAX_SWPPAGE];
 extern list_head free_sf, used_sf;
 extern uint64_t swap_start_offset, swap_start_sector;
 
 extern ptr_t allocPage(int numPage);
-extern ptr_t allocPage_from_freePF(int type, pcb_t *pcb_ptr, uint64_t va);
+extern ptr_t allocPage_from_freePF(int type, pcb_t *pcb_ptr, uint64_t va, uint64_t attribute);
 extern void init_page();
 extern void recycle_pages(pcb_t *pcb_ptr);
-extern void allocPage_from_freeSF(pcb_t *pcb_ptr, uint64_t va);
+extern void allocPage_from_freeSF(pcb_t *pcb_ptr, uint64_t va, uint64_t attribute);
 extern void swap_in(swp_pg_t *in_page);
 extern void swap_out(phy_pg_t *out_page);
 extern void transfer_page_p2s(uint64_t phy_addr, uint64_t start_sector);
 extern void transfer_page_s2p(uint64_t phy_addr, uint64_t start_sector);
 extern swp_pg_t *query_swp_page(uint64_t va, pcb_t *pcb_ptr);
 extern void unmap(uint64_t va, uint64_t pgdir);
-extern uint64_t map(uint64_t va, uint64_t kva, uint64_t pgdir);
+//extern uint64_t map(uint64_t va, uint64_t kva, uint64_t pgdir);
 
 // TODO [P4-task1] */
 void freePage(ptr_t baseAddr);
@@ -130,7 +132,7 @@ extern ptr_t allocLargePage(int numPage);
 // TODO [P4-task1] */
 extern void* kmalloc(size_t size);
 extern void share_pgtable(uintptr_t dest_pgdir, uintptr_t src_pgdir);
-extern uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, pcb_t *pcb_ptr, int type);
+extern uintptr_t alloc_page_helper(uintptr_t va, pcb_t *pcb_ptr, int type, uint64_t attribute);
 extern void unmap_boot();
 
 // TODO [P4-task4]: shm_page_get/dt */

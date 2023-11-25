@@ -130,14 +130,18 @@ pid_t init_pcb_vname(char *name, int argc, char *argv[]){
         }
         kernel_stack_kva = pcb_new->kernel_sp;
 
+        uint64_t attribute;
+
         // [p4] alloc a page for user stack
         pcb_new->user_sp = pcb_new->user_stack_base = USER_STACK_ADDR;
-        user_stack_kva = alloc_page_helper(USER_STACK_ADDR - NORMAL_PAGE_SIZE, pgdir, pcb_new, PF_UNPINNED) + NORMAL_PAGE_SIZE;
-        allocPage_from_freeSF(pcb_new, get_vf(USER_STACK_ADDR - NORMAL_PAGE_SIZE));
+        attribute = _PAGE_ACCESSED | _PAGE_DIRTY | _PAGE_READ | _PAGE_WRITE;
+        user_stack_kva = alloc_page_helper(USER_STACK_ADDR - NORMAL_PAGE_SIZE, pcb_new, PF_UNPINNED, attribute) + NORMAL_PAGE_SIZE;
+        allocPage_from_freeSF(pcb_new, get_vf(USER_STACK_ADDR - NORMAL_PAGE_SIZE), attribute);
 
         // [p4] alloc a security page
-        alloc_page_helper(SECURITY_BASE, pgdir, pcb_new, PF_PINNED);
-        allocPage_from_freeSF(pcb_new, SECURITY_BASE);
+        attribute = _PAGE_ACCESSED | _PAGE_DIRTY | _PAGE_READ | _PAGE_WRITE;
+        alloc_page_helper(SECURITY_BASE, pcb_new, PF_PINNED, attribute);
+        allocPage_from_freeSF(pcb_new, SECURITY_BASE, attribute);
        
         pcb_new->status = TASK_READY;
         pcb_new->cursor_x = pcb_new->cursor_y = 0;

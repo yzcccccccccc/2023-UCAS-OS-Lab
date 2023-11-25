@@ -58,8 +58,7 @@ static inline int list_empty(list_node_t *list_head_ptr){
 
 // void list_insert(head_ptr, node_ptr): insert node into head
 static inline void list_insert(list_node_t *list_head_ptr, list_node_t *list_node_ptr){
-    list_node_t *ptr = list_head_ptr;
-    while (ptr->next != list_head_ptr) ptr = ptr->next;
+    list_node_t *ptr = list_head_ptr->prev;
     list_node_ptr->prev = ptr;
     ptr->next = list_node_ptr;
     list_node_ptr->next = list_head_ptr;
