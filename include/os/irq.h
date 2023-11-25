@@ -70,6 +70,7 @@ extern void interrupt_helper(regs_context_t *regs, uint64_t stval, uint64_t scau
 extern void exception_handler_entry(void);
 extern void init_exception();
 extern void setup_exception();
+extern void clear_SIP();
 
 extern void handle_irq_timer(regs_context_t *regs, uint64_t stval, uint64_t scause);
 extern void handle_other(regs_context_t *regs, uint64_t stval, uint64_t scause);

@@ -4,6 +4,7 @@
 #include <type.h>
 
 #define NR_CPUS 2
+extern const unsigned long cpu_mask_arr[2];
 extern void smp_init();
 extern void wakeup_other_hart();
 extern uint64_t get_current_cpu_id();

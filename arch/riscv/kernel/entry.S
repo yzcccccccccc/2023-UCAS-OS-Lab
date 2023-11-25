@@ -218,3 +218,9 @@ ENTRY(exception_handler_entry)
   j     interrupt_helper
 
 ENDPROC(exception_handler_entry)
+
+
+ENTRY(clear_SIP)
+  csrw CSR_SIP, zero
+  jr ra
+ENDPROC(clear_SIP)

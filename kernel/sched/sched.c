@@ -151,6 +151,11 @@ int do_kill(pid_t pid){                                 /* Kill process of certa
         if (pcb[i].pid == pid && pcb[i].status != TASK_EXITED){
             suc = 1;
 
+            // kill another?
+            int other_cpu = cpuid ^ 1;
+            if (current_running[other_cpu] == &pcb[i])
+                send_ipi(&cpu_mask_arr[other_cpu]);
+
             /* Release waiting list */
             list_node_t *ptr;
             pcb_t *pcb_ptr;

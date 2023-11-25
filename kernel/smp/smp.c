@@ -6,6 +6,7 @@
 
 spin_lock_t kernel_lock;
 int kernel_cpu_id = -1;
+const unsigned long cpu_mask_arr[2] = {0x1, 0x2};
 
 void smp_init()
 {

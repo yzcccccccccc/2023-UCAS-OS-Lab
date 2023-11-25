@@ -54,11 +54,6 @@ void init_page(){
         sf[i].user_pid      = -1;
         list_insert(&free_sf, &sf[i].list);
     }
-
-    // security page
-    //arg_page_base = arg_page_ptr = allocPage(1);
-    //security_page1.kva = allocPage(1);
-    //security_page2.kva = allocPage(1);
 }
 
 //------------------------------------- Physical Page Management -------------------------------------
@@ -203,40 +198,6 @@ void unmap(uint64_t va, uint64_t pgdir){
     return;
 }
 
-/*
-// [p4-task1] map virtual frame va into physical frame kva
-uint64_t map(uint64_t va, uint64_t kva, uint64_t pgdir){
-    va &= VA_MASK;
-
-    //--------------------------------get VPN bits--------------------------------
-    uint64_t vpn2 = va >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS);
-    uint64_t vpn1 = (vpn2 << PPN_BITS) ^
-                    (va >> (NORMAL_PAGE_SHIFT + PPN_BITS));
-    uint64_t vpn0 = (vpn2 << (2 * PPN_BITS)) ^
-                    (vpn1 << PPN_BITS) ^
-                    (va >> (NORMAL_PAGE_SHIFT));
-
-    //--------------------------------aloc PTE--------------------------------
-    PTE *pmd2 = (PTE *)pgdir;
-    if (!(pmd2[vpn2] & _PAGE_PRESENT)){
-        set_pfn(&pmd2[vpn2], kva2pa(allocPage(1)) >> NORMAL_PAGE_SHIFT);
-        set_attribute(&pmd2[vpn2], _PAGE_PRESENT | _PAGE_USER);
-        clear_pgdir(pa2kva(get_pa(pmd2[vpn2])));
-    }
-    PTE *pmd1 = (PTE *)pa2kva(get_pa(pmd2[vpn2]));
-    if (!(pmd1[vpn1] & _PAGE_PRESENT)){
-        set_pfn(&pmd1[vpn1], kva2pa(allocPage(1)) >> NORMAL_PAGE_SHIFT);
-        set_attribute(&pmd1[vpn1], _PAGE_PRESENT | _PAGE_USER);
-        clear_pgdir(pa2kva(get_pa(pmd1[vpn1])));
-    }
-    PTE *pmd0 = (PTE *)pa2kva(get_pa(pmd1[vpn1]));
-    if (!(pmd0[vpn0] & _PAGE_PRESENT)){
-        set_pfn(&pmd0[vpn0], kva2pa(kva) >> NORMAL_PAGE_SHIFT);
-        set_attribute(&pmd0[vpn0], _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC | _PAGE_ACCESSED | _PAGE_DIRTY | _PAGE_USER);
-    }
-    return pa2kva(get_pa(pmd0[vpn0]));
-}*/
-
 void freePage(ptr_t baseAddr)
 {
     // TODO [P4-task1] (design your 'freePage' here if you need):
@@ -359,14 +320,17 @@ void swap_in(swp_pg_t *in_page){
 
 // [p4-task3] swap out a physical page (write_back = 1: dirty, write to the swap area)
 void swap_out(phy_pg_t *out_page){
-    // debug
-    //printl("[ticks: %ld][core %d] swap out page (va: %lx, kva: %lx, pid: %d)\n", get_ticks(), get_current_cpu_id(), out_page->va, out_page->kva, out_page->user_pcb->pid);
     uint64_t va = out_page->va & VA_MASK;
     uint64_t pgdir = out_page->user_pcb->pgdir;
 
     pcb_t *pcb_ptr = out_page->user_pcb;
 
-    // First: write back (optional)
+    // Step0: inform other core
+    int other_cpu = get_current_cpu_id() ^ 1;
+    if (current_running[other_cpu] == out_page->user_pcb)
+        send_ipi(&cpu_mask_arr[other_cpu]);
+
+    // Step1: write back (optional)
     bool write_back = get_attribute(get_PTE_va(va, pgdir), _PAGE_DIRTY);
     if (write_back){
         swp_pg_t *swp_page = query_swp_page(va, pcb_ptr);
@@ -378,7 +342,7 @@ void swap_out(phy_pg_t *out_page){
         transfer_page_p2s(phy_addr, swp_page->start_sector);
     }
 
-    // Second: update physical frame info and page-table
+    // Step2: update physical frame info and page-table
     unmap(va, pgdir);         // remove from the user page-table
     out_page->user_pid = -1;
     out_page->user_pcb = NULL;

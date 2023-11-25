@@ -102,6 +102,21 @@ void handle_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scause){
     return;
 }
 
+// Situation1: core0 kill core1's process
+// Situation2: core0 swap out core1's page
+void handle_ipi(regs_context_t *regs, uint64_t stval, uint64_t scause){
+    int cpuid = get_current_cpu_id();
+    if (current_running[cpuid]->status == TASK_EXITED){         // killed by another core :(
+        do_scheduler();
+    }
+    else{
+        local_flush_tlb_all();
+        local_flush_icache_all();
+    }
+    clear_SIP();
+    return;
+}
+
 void init_exception()
 {
     /* TODO: [p2-task3] initialize exc_table */
@@ -117,6 +132,7 @@ void init_exception()
         irq_table[i] = handle_other;
     }
     irq_table[IRQC_S_TIMER] = handle_irq_timer;
+    irq_table[IRQC_S_SOFT] = handle_ipi;
     /* TODO: [p2-task3] set up the entrypoint of exceptions */
     setup_exception();
 }
