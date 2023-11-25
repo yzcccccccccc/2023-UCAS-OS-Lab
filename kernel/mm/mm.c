@@ -171,7 +171,7 @@ void recycle_pages(pcb_t *pcb_ptr){
 void unmap_boot(){
     PTE *pgdir = (PTE *)pa2kva(PGDIR_PA), *pmd1;
     uint64_t vpn2, vpn1;
-    for (uint64_t va = 0x50000000lu; va < 0x51000000lu; va += 0x200000lu){
+    for (uint64_t va = 0x50200000lu; va < 0x51000000lu; va += 0x200000lu){
         vpn2 = (va & VA_MASK) >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS);
         vpn1 = (vpn2 << PPN_BITS) ^ (va >> (NORMAL_PAGE_SHIFT + PPN_BITS));
         pmd1 = (PTE *)pa2kva(get_pa(pgdir[vpn2]));
