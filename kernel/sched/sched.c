@@ -151,6 +151,10 @@ int do_kill(pid_t pid){                                 /* Kill process of certa
         if (pcb[i].pid == pid && pcb[i].status != TASK_EXITED){
             suc = 1;
 
+            // sub-thread?
+            if (pcb[i].thread_type == SUB_THREAD)
+                pcb[i].par->tid--;
+
             // kill another?
             int other_cpu = cpuid ^ 1;
             if (current_running[other_cpu] == &pcb[i])

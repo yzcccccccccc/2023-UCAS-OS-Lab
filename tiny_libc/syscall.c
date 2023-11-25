@@ -49,7 +49,6 @@ void sys_move_cursor_c(int dx, int dy)
 void sys_write(char *buff)
 {
     /* [p4-task3] copy parameters to security page */
-    RESET_SECPAGE_PTR;
     buff = (char *)copy_str_to_secPage(buff);
 
     /* TODO: [p2-task3] call invoke_syscall to implement sys_write */
@@ -132,7 +131,6 @@ pid_t  sys_exec(int id, int argc, uint64_t arg0, uint64_t arg1, uint64_t arg2)
 pid_t  sys_exec(char *name, int argc, char **argv)
 {
     /* [p4-task3] */
-    RESET_SECPAGE_PTR;
     name = (char *)copy_str_to_secPage(name);
     argv = (char **)copy_argv_to_secPage(argv, argc);
 
@@ -253,7 +251,6 @@ void sys_semaphore_destroy(int sema_idx)
 int sys_mbox_open(char * name)
 {
     /* [p4-task3] */
-    RESET_SECPAGE_PTR;
     name = (char *)copy_str_to_secPage(name);
 
     /* TODO: [p3-task2] call invoke_syscall to implement sys_mbox_open */
@@ -269,7 +266,6 @@ void sys_mbox_close(int mbox_id)
 int sys_mbox_send(int mbox_idx, void *msg, int msg_length)
 {
     /* [p4-task3] */
-    RESET_SECPAGE_PTR;
     msg = (void *)copy_str_to_secPage((char *)msg);
 
     /* TODO: [p3-task2] call invoke_syscall to implement sys_mbox_send */
@@ -279,20 +275,18 @@ int sys_mbox_send(int mbox_idx, void *msg, int msg_length)
 int sys_mbox_recv(int mbox_idx, void *msg, int msg_length)
 {
     /* [p4-task3] */
-    RESET_SECPAGE_PTR;
-    uint64_t tmp_ptr = secPage_ptr;
+    uint64_t tmp_msg_ptr = malloc_secPage(msg_length);
 
     /* TODO: [p3-task2] call invoke_syscall to implement sys_mbox_recv */
-    int rtval = invoke_syscall(SYSCALL_MBOX_RECV, (long)mbox_idx, (long)tmp_ptr, (long)msg_length, 0, 0);
+    int rtval = invoke_syscall(SYSCALL_MBOX_RECV, (long)mbox_idx, (long)tmp_msg_ptr, (long)msg_length, 0, 0);
 
-    copy_secPage_to_ptr((void *)tmp_ptr, msg, msg_length);
+    copy_secPage_to_ptr((void *)tmp_msg_ptr, msg, msg_length);
     return rtval;
 }
 /************************************************************/
 
 int sys_taskset(char *name, int mask, int pid){
     /* [p4-task3] */
-    RESET_SECPAGE_PTR;
     name = (char *)copy_str_to_secPage(name);
 
     /* [p3-task5] taskset */

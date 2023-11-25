@@ -138,9 +138,9 @@ void recv_thread(void *arg)
         put_str_into_ring_buffer(recv_buf, len);
 
         sys_move_cursor(1, position);
-        printf("[%c-recv] from %c: %ld \t from %c: %ld\n",
+        printf("[%c-recv] from %c: %ld \t from %c: %ld, pos: %d (%lx)\n",
             id, other_id[0], bytes[other_id[0] - 'a'],
-            other_id[1], bytes[other_id[1] - 'a']);
+            other_id[1], bytes[other_id[1] - 'a'], position, &position);
         if(len == remain_size) break;
         sys_sleep(1);
     }
@@ -179,10 +179,11 @@ void send_thread(void *arg)
         bytes[target] += len;
 
         sys_move_cursor(1, position);
-        printf("[%c-send] to %c: %ld \t to %c: %ld\n",
+        printf("[%c-send] to %c: %ld \t to %c: %ld, pos: %d (%lx)\n",
             id, other_id[0], bytes[0],
-            other_id[1], bytes[1]);
-        if(bytes[0] >= DATA_LENGTH && bytes[1] >= DATA_LENGTH) break;
+            other_id[1], bytes[1], position, &position);
+        if(bytes[0] >= DATA_LENGTH && bytes[1] >= DATA_LENGTH)
+            break;
         sys_sleep(1);
     }
 }

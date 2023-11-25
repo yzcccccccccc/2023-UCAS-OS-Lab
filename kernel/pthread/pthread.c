@@ -55,7 +55,8 @@ pid_t pthread_create(uint64_t entry_addr, void *arg){
     // pid
     pcb_new->pid = pid_n;
     // thread info
-    pcb_new->tid = current_running[cpuid]->tid + 1;
+    current_running[cpuid]->tid ++;
+    pcb_new->tid = current_running[cpuid]->tid;
     pcb_new->thread_type = SUB_THREAD;
     pcb_new->par = current_running[cpuid];
     // cpu

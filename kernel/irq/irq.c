@@ -57,11 +57,11 @@ void handle_irq_timer(regs_context_t *regs, uint64_t stval, uint64_t scause)
     User Stack Location:
     ----------------------------------------------------
                     ...
-    0xf00014000 ---------------------------------------- > Sub thread 2 (tid2)
+    0xf00014000 ---------------------------------------- > Sub thread 2 (tid=2)
                         Sub stack area (4KB)
     0xf00013000 ----------------------------------------
                         Critical area (4KB)
-    0xf00012000 ---------------------------------------- > Sub thread 1 (tid1)
+    0xf00012000 ---------------------------------------- > Sub thread 1 (tid=1)
                         Sub stack area (4KB)
     0xf00011000 ----------------------------------------
                         Critical area (4KB)
@@ -77,8 +77,18 @@ void handle_irq_timer(regs_context_t *regs, uint64_t stval, uint64_t scause)
 *****************************************************************************/
 void handle_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scause){
     int cpuid = get_current_cpu_id();
-    if (stval >= USER_CRITICAL_AREA_LOWER && stval < USER_CRITICAL_AREA_UPPER){     // in the critical area!
-        printk("[Core %d]: Core dumped at: 0x%lx\n", cpuid, stval);
+    // get the range of the critical area
+    uint64_t lower_bound, upper_bound;
+    if (current_running[cpuid]->thread_type == MAIN_THREAD){
+        lower_bound = USER_CRITICAL_AREA_LOWER;
+        upper_bound = USER_CRITICAL_AREA_UPPER;
+    }
+    else{
+        lower_bound = USER_CRITICAL_AREA_LOWER + (current_running[cpuid]->tid - 1) * NORMAL_PAGE_SIZE * 2 + NORMAL_PAGE_SIZE * 3;
+        upper_bound = lower_bound + NORMAL_PAGE_SIZE;
+    }
+    if (stval >= lower_bound && stval < upper_bound){     // in the critical area!
+        printk("[Core %d]: Core dumped at: 0x%lx, pid = %d\n", cpuid, stval, current_running[cpuid]->pid);
         do_exit();
     }      
     else{
