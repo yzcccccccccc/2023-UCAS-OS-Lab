@@ -280,10 +280,13 @@ int sys_mbox_recv(int mbox_idx, void *msg, int msg_length)
 {
     /* [p4-task3] */
     RESET_SECPAGE_PTR;
-    msg = (void *)copy_str_to_secPage((char *)msg);
+    uint64_t tmp_ptr = secPage_ptr;
 
     /* TODO: [p3-task2] call invoke_syscall to implement sys_mbox_recv */
-    return invoke_syscall(SYSCALL_MBOX_RECV, (long)mbox_idx, (long)msg, (long)msg_length, 0, 0);
+    int rtval = invoke_syscall(SYSCALL_MBOX_RECV, (long)mbox_idx, (long)tmp_ptr, (long)msg_length, 0, 0);
+
+    copy_secPage_to_ptr((void *)tmp_ptr, msg, msg_length);
+    return rtval;
 }
 /************************************************************/
 

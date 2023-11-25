@@ -365,12 +365,15 @@ void swap_out(phy_pg_t *out_page){
     uint64_t pgdir = out_page->user_pcb->pgdir;
 
     pcb_t *pcb_ptr = out_page->user_pcb;
-    if (pcb_ptr->par != NULL)   pcb_ptr = pcb_ptr->par;                 // main_thread manages all the physical frame, while sub thread only manages the user stack
 
     // First: write back (optional)
     bool write_back = get_attribute(get_PTE_va(va, pgdir), _PAGE_DIRTY);
     if (write_back){
         swp_pg_t *swp_page = query_swp_page(va, pcb_ptr);
+        if (swp_page == NULL){                                          // not the thread stack page
+            pcb_ptr = pcb_ptr->par;
+            swp_page = query_swp_page(va, pcb_ptr);
+        }
         uint64_t phy_addr = kva2pa(out_page->kva);
         transfer_page_p2s(phy_addr, swp_page->start_sector);
     }

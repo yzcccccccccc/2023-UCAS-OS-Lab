@@ -52,6 +52,14 @@ void do_scheduler(void)
     /* Do not touch this comment. Reserved for future projects. */
     /************************************************************/
 
+    pcb_t *prev = current_running[cpu_id];
+
+    if (prev->status == TASK_RUNNING){
+        prev->status = TASK_READY;
+        if (prev != &pid0_core0_pcb && prev != &pid0_core1_pcb)
+            list_insert(&ready_queue, &(prev->list));
+    }
+
     // TODO: [p2-task1] Modify the current_running pointer.
     list_node_t *ptr = (&ready_queue)->next;
     pcb_t *next;
@@ -70,14 +78,6 @@ void do_scheduler(void)
     }
     else
         list_delete(ptr);               // remove from ready_queu :D
-    
-    pcb_t *prev = current_running[cpu_id];
-
-    if (prev->status == TASK_RUNNING){
-        prev->status = TASK_READY;
-        if (prev != &pid0_core0_pcb && prev != &pid0_core1_pcb)
-            list_insert(&ready_queue, &(prev->list));
-    }
     
     next->status = TASK_RUNNING;
     next->cid = cpu_id;

@@ -43,3 +43,17 @@ uint64_t copy_str_to_secPage(char *str){
     
     return (uint64_t)rt_str;
 }
+
+// [p4-task3]
+void copy_secPage_to_ptr(void *secPage_ptr, void *ptr, int len){
+    if (secPage_mlock_handle == -1){            // init the lock!
+        int cur_pid = sys_getpid();
+        secPage_mlock_handle = sys_mutex_init(cur_pid + MAGIC_NUM);
+    }
+
+    sys_mutex_acquire(secPage_mlock_handle);
+    for (int i = 0; i < len; i++){
+        *(char *)(ptr + i) = *(char *)(secPage_ptr + i);
+    }
+    sys_mutex_release(secPage_mlock_handle);
+}

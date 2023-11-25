@@ -84,11 +84,14 @@ void handle_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scause){
     else{
         uint64_t attribute = _PAGE_ACCESSED | _PAGE_DIRTY | _PAGE_READ | _PAGE_WRITE;
         uint64_t va = get_vf(stval);                        // belongs to which virtual frame?
-        swp_pg_t *swp_pg_ptr = query_swp_page(va, current_running[cpuid]);
+        pcb_t *pcb_ptr = current_running[cpuid];
+        swp_pg_t *swp_pg_ptr = query_swp_page(va, pcb_ptr);     // sub-thread stack?
+        if (pcb_ptr->par != NULL && swp_pg_ptr == NULL){    // main-thread
+            pcb_ptr = pcb_ptr->par;
+            swp_pg_ptr = query_swp_page(va, pcb_ptr);
+        }
 
         if (swp_pg_ptr == NULL){                            // not in swap area -> alloc a new page
-            pcb_t *pcb_ptr = current_running[cpuid];
-            if (pcb_ptr->par != NULL)   pcb_ptr = pcb_ptr->par;                     // main_thread's duty
             alloc_page_helper(stval, pcb_ptr, PF_UNPINNED, attribute);              // alloc a physical page
             allocPage_from_freeSF(pcb_ptr, stval, attribute);                       // copy to swap area
         }
