@@ -2,6 +2,7 @@
 #include <os/smp.h>
 #include <printk.h>
 #include <os/time.h>
+#include <assert.h>
 
 #define PAGE_OCC_SEC    8           // 4KB = 8 * 512B
 
@@ -62,11 +63,9 @@ void init_page(){
     }
 
     // shared pages
-    uint64_t _va = SHM_PAGE_BASE;
-    for (int i = 0; i < NUM_MAX_SHMPAGE; i++, _va += NORMAL_PAGE_SIZE){
-        shm_f[i].status = 0;
+    for (int i = 0; i < NUM_MAX_SHMPAGE; i++){
+        shm_f[i].status = SHM_UNUSED;
         shm_f[i].user_num = 0;
-        shm_f[i].va = _va;
     }
 }
 
@@ -153,6 +152,10 @@ void recycle_pages(pcb_t *pcb_ptr){
         // unmap
         unmap(pf_node->va & VA_MASK, pgdir);
 
+        // check shm (va in shm?)
+        if (pf_node->va >= SHM_PAGE_BASE && pf_node->va < SHM_PAGE_BOUND)
+            shm_f[(pf_node->va - SHM_PAGE_BASE) / NORMAL_PAGE_SIZE].status = SHM_UNUSED;         // release
+
         pf_node->va = 0;
         pf_node->user_pid = -1;
         pf_node->user_pcb = NULL;
@@ -180,13 +183,22 @@ void recycle_pages(pcb_t *pcb_ptr){
     }
 
     // Third: recycle shm page
-    for (int i = 0; i < NUM_MAX_SHMPAGE; i++){
+    uint64_t _va = SHM_PAGE_BASE, _kva;
+    for (int i = 0, idx; i < NUM_MAX_SHMPAGE; i++, _va += NORMAL_PAGE_SIZE){
         if (pcb_ptr->shm_info & (1 << i)){
-            shm_f[i].user_num--;
-            unmap(shm_f[i].va, pcb_ptr->pgdir);
             pcb_ptr->shm_info &= (~(1 << i));
-            if (shm_f[i].user_num == 0)
-                shm_page_recycle(&shm_f[i]);
+            _kva = get_kva_v(_va, pcb_ptr->pgdir);
+            if (!_kva)
+                continue;                   // continue if this is not a shm_Page
+
+            // get the location in shm_f
+            idx = query_SHM_kva(_kva);
+            
+            // recycle work
+            shm_f[idx].user_num--;
+            unmap(_va, pcb_ptr->pgdir);
+            if (shm_f[idx].user_num == 0)
+                shm_page_recycle(&shm_f[idx]);
         }
     }
     return;
@@ -432,33 +444,62 @@ phy_pg_t *query_PFofSHM(uint64_t va){
     return phy_ptr;
 }
 
+// [p4-task5] return the idx in shm_f[]
+int query_SHM_kva(uint64_t kva){
+    int rtidx = -1;
+    for (int i = 0; i < NUM_MAX_SHMPAGE; i++){
+        if (shm_f[i].status == SHM_USED && shm_f[i].kva == kva){
+            rtidx = i;
+            break;
+        }
+    }
+    return rtidx;
+}
+
 uintptr_t shm_page_get(int key)
 {
     int cpuid = get_current_cpu_id();
     // TODO [P4-task4] shm_page_get:
     uint64_t rt_va = 0, attribute = _PAGE_WRITE | _PAGE_READ | _PAGE_ACCESSED | _PAGE_DIRTY;
     int shm_idx = -1;
-    for (int i = 0; i < NUM_MAX_SHMPAGE; i++){
-        if (shm_f[i].key == key){
-            rt_va = shm_f[i].va;
-            map(rt_va, shm_f[i].kva, current_running[cpuid]->pgdir, attribute);
-            shm_f[i].user_num++;
-            current_running[i]->shm_info |= (1 << i);
+
+    // Step0: Find a available va for the current process
+    uint64_t shm_info = current_running[cpuid]->shm_info, test_bit = 1;
+    for (int i = 0; i < NUM_MAX_SHMPAGE; i++, test_bit <<= 1){
+        if (!(shm_info & test_bit)){
+            shm_info |= test_bit;
+            current_running[cpuid]->shm_info = shm_info;
+            rt_va = SHM_PAGE_BASE + i * NORMAL_PAGE_SIZE;
             break;
         }
-        if (shm_idx == -1 && shm_f[i].status == 0)
+    }
+    assert(rt_va != 0);
+
+    // Step1: Check the shm_f[]
+    uint64_t rt_kva = 0;
+    for (int i = 0; i < NUM_MAX_SHMPAGE; i++){
+        if (shm_f[i].status == SHM_USED && shm_f[i].key == key){
+            rt_kva = shm_f[i].kva;
+            shm_idx = i;
+            break;
+        }
+        if (shm_idx == -1 && shm_f[i].status == SHM_UNUSED)
             shm_idx = i;
     }
 
-    if (rt_va == 0){
+    // Step2: do the map work
+    if (rt_kva == 0){                           // need a new shmPage
         free_shm_page_num--;
-        rt_va = shm_f[shm_idx].va;
-        shm_f[shm_idx].status = 1;
+        shm_f[shm_idx].status = SHM_USED;
         shm_f[shm_idx].user_num = 1;
         shm_f[shm_idx].key = key;
-        shm_f[shm_idx].kva = alloc_page_helper(rt_va, &pid0_core0_pcb, PF_PINNED, attribute);
+        shm_f[shm_idx].kva = rt_kva = allocPage_from_freePF(PF_PINNED, &pid0_core0_pcb, rt_va, attribute);
         shm_f[shm_idx].phy_page = query_PFofSHM(rt_va);
         map(rt_va, shm_f[shm_idx].kva, current_running[cpuid]->pgdir, attribute);
+    }
+    else{
+        shm_f[shm_idx].user_num++;
+        map(rt_va, rt_kva, current_running[cpuid]->pgdir, attribute);
     }
     return rt_va;
 }
@@ -467,11 +508,13 @@ void shm_page_dt(uintptr_t addr)
 {
     // TODO [P4-task4] shm_page_dt:
     int cpuid = get_current_cpu_id();
+    uint64_t _kva = get_kva_v(addr, current_running[cpuid]->pgdir);
+    int idx = (addr - SHM_PAGE_BASE) / NORMAL_PAGE_SIZE;
+    current_running[cpuid]->shm_info &= (~(1 << idx));
     for (int i = 0; i < NUM_MAX_SHMPAGE; i++){
-        if (shm_f[i].va == addr){
+        if (shm_f[i].status == SHM_USED && shm_f[i].kva == _kva){
             shm_f[i].user_num--;
-            unmap(shm_f[i].va, current_running[cpuid]->pgdir);
-            current_running[cpuid]->shm_info &= (~(1 << i));
+            unmap(addr, current_running[cpuid]->pgdir);
             if (shm_f[i].user_num == 0)
                 shm_page_recycle(&shm_f[i]);
             break;
@@ -486,14 +529,15 @@ void shm_page_recycle(shm_pg_t *shm_ptr){
     phy_pg_t *phy_ptr = shm_ptr->phy_page;
     list_delete(&phy_ptr->pcb_list);                 // delete from pid0_core0_pcb
     list_delete(&phy_ptr->list);                     // remove from used_quee
-    list_insert(&phy_ptr->list, &free_pf);
+    list_insert(&free_pf, &phy_ptr->list);
     phy_ptr->type = PF_UNUSED;
     phy_ptr->user_pid = -1;
     phy_ptr->user_pcb = NULL;
     phy_ptr->va = 0;
+    free_page_num++;
 
     // shm page info
-    shm_ptr->status = 0;
+    shm_ptr->status = SHM_UNUSED;
     shm_ptr->kva = 0;
     shm_ptr->user_num = 0;
     shm_ptr->phy_page = NULL;

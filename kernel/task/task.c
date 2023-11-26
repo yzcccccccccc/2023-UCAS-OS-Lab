@@ -139,7 +139,7 @@ pid_t init_pcb_vname(char *name, int argc, char *argv[]){
         allocPage_from_freeSF(pcb_new, get_vf(USER_STACK_ADDR - NORMAL_PAGE_SIZE), attribute);
 
         // [p4] alloc a security page
-        attribute = _PAGE_ACCESSED | _PAGE_DIRTY | _PAGE_READ | _PAGE_WRITE;
+        attribute = _PAGE_ACCESSED | _PAGE_DIRTY | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC;
         alloc_page_helper(SECURITY_BASE, pcb_new, PF_PINNED, attribute);
         allocPage_from_freeSF(pcb_new, SECURITY_BASE, attribute);
        

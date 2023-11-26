@@ -39,6 +39,7 @@
 #define INIT_KERNEL_STACK 0xffffffc052000000
 #define FREEMEM_KERNEL (INIT_KERNEL_STACK+4*PAGE_SIZE)
 #define SHM_PAGE_BASE   0x80000000                      // virtual addr of the base of shared memory pages
+#define SHM_PAGE_BOUND  (SHM_PAGE_BASE + NUM_MAX_SHMPAGE * NORMAL_PAGE_SIZE)
 
 /* Rounding; only works for n = power of two */
 #define ROUND(a, n)     (((((uint64_t)(a))+(n)-1)) & ~((n)-1))
@@ -102,14 +103,19 @@ extern list_head free_sf, used_sf;
 extern uint64_t swap_start_offset, swap_start_sector;
 
 // [p4] for managing the shared memory pages
+typedef enum{
+    SHM_UNUSED,
+    SHM_USED
+}shm_stat_t;
 typedef struct shm_pg{
-    uint64_t va, kva;
+    uint64_t kva;
     int key;
     int user_num;                               // how many users?
-    int status;                                 // 0: in use, 1: not use
+    shm_stat_t status;
     phy_pg_t *phy_page;
 }shm_pg_t;
 extern shm_pg_t shm_f[NUM_MAX_SHMPAGE];
+extern int query_SHM_kva(uint64_t kva);
 
 extern ptr_t allocPage(int numPage);
 extern ptr_t allocPage_from_freePF(int type, pcb_t *pcb_ptr, uint64_t va, uint64_t attribute);

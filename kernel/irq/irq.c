@@ -101,7 +101,12 @@ void handle_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scause){
             swp_pg_ptr = query_swp_page(va, pcb_ptr);
         }
 
-        if (swp_pg_ptr == NULL){                            // not in swap area -> alloc a new page
+        if (swp_pg_ptr == NULL){                                // not in swap area -> alloc a new page
+            uint64_t va = get_vf(stval);
+            if (va >= SHM_PAGE_BASE && va < SHM_PAGE_BOUND){    // occupy shared memory va?
+                int idx = (va - SHM_PAGE_BASE) / NORMAL_PAGE_SIZE;
+                current_running[cpuid]->shm_info |= (1 << idx);
+            }
             alloc_page_helper(stval, pcb_ptr, PF_UNPINNED, attribute);              // alloc a physical page
             allocPage_from_freeSF(pcb_ptr, stval, attribute);                       // copy to swap area
         }

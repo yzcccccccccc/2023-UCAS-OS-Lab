@@ -17,26 +17,32 @@ void do_process_show(){
     for (int i = 0; i < NAME_LEN_SPACE - 4; i++)    printk(" ");
     printk("Status ");
     printk("       CPUID");
-    printk("       MASK\n");
+    printk("       MASK");
+    printk("       PAR_PID\n");
 
     /* Table Body */
     for (int i = 1, len; i < TASK_MAXNUM; i++){
         if (pcb[i].pid == 0)
             continue;
+        // pid
         printk("%03d", pcb[i].pid);
         for (int j = 0; j < 5; j++) printk(" ");
 
+        // name
         len = strlen(pcb[i].name);
         printk("%s", pcb[i].name);
         for (int j = 0; j < NAME_LEN_SPACE - len; j++)  printk(" ");
 
+        // status
         printk("%s", (pcb[i].status == TASK_BLOCKED ? "BLOCKED"
                 : pcb[i].status == TASK_READY ? "READY  "
                 : pcb[i].status == TASK_RUNNING ? "RUNNING"
                 : "EXITED "));
+
+        // CPUID
         if (pcb[i].status == TASK_RUNNING){
             printk("       %d", pcb[i].cid);
-            if (pcb[i].cid % 10)
+            if (pcb[i].cid / 10)
                 printk("   ");
             else
                 printk("    ");
@@ -45,7 +51,15 @@ void do_process_show(){
             printk("       N/A");
             printk("  ");
         }
-        printk("       0x%x\n", pcb[i].mask);
+        
+        // mask
+        printk("       0x%x ", pcb[i].mask);
+
+        // par pid
+        if (pcb[i].par == NULL)
+            printk("       N/A\n");
+        else
+            printk("       %d\n", pcb[i].par->pid);
     }
 }
 

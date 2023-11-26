@@ -146,4 +146,6 @@ int do_mbox_recv(int mbox_idx, void * msg, int msg_length);
 
 /************************************************************/
 
+#define MLOCK_MAGIC_NUM 114514
+
 #endif

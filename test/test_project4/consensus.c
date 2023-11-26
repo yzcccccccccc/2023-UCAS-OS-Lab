@@ -100,7 +100,8 @@ int main(int argc, char* argv[])
     }
 
     sys_sleep(2);
-
+    sys_move_cursor(1, print_location);
+    printf("barrier idx: %d\n", vars->barrier);
     sys_barrier_wait(vars->barrier);
     pid_t mypid = sys_getpid();
     sys_move_cursor(1, print_location);
@@ -122,7 +123,7 @@ int main(int argc, char* argv[])
                 myround = fetch_add(&vars->round, 1) + 1;
             } else {
                 sys_move_cursor(1, print_location);
-                printf("(%d) we selecte (%d)                            \n",
+                printf("(%d) we select (%d)                            \n",
                        mypid, consensus);
             }
         } else {

@@ -87,6 +87,8 @@ void lock_resource_release(pid_t pid){
         if (mlocks[i].pid == pid){
             do_mutex_lock_release(i);
         }
+        if (mlocks[i].key == pid + MLOCK_MAGIC_NUM)         // release the secPage lock
+            mlocks[i].key = -1;
     }
 }
 
