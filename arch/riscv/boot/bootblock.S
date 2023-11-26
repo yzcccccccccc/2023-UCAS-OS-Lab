@@ -29,13 +29,28 @@ main:
 
 	lui		a0, %hi(kernel)					# load kernel addr
 	addi	a0, a0, %lo(kernel)
+	mv		s0, a0
 
 	la		t0, os_size_loc					# load block num
-	lh		a1, 0(t0)
+	lh		s1, 0(t0)
+	li		s2, 1							# load start id
+	li		s3, 64
 
-	li		a2, 1							# load start id
-
+kernel_loader:
+	mv		a1, s1
+	blt		s1, s3, call_bios_loader		# branch if s1 < 64
+	mv		a1, s3
+call_bios_loader:
+	mv		a0, s0
+	mv		a2, s2
+	li		a7, BIOS_SDREAD
 	jal		bios_func_entry					# call BIOS to read kernel in SD card
+	addi	s2, s2, 64						# s2 = s2 + 64
+	addi	s1, s1, -64						# s1 = s1 - 64
+	li		t0, 0x8000
+	add		s0, s0, t0						# 64 sectors = 0x8000 bytes
+	blt		zero, s1, kernel_loader
+	
 
 	// TODO: [p1-task4] load task-related arguments and pass them to kernel
 

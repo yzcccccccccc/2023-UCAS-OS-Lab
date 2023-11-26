@@ -9,6 +9,8 @@
 
 extern void ret_from_exception();
 
+const uint32_t MAGIC_CODE[7]={0x00100893, 0x00000513, 0x00000593, 0x00000613, 0x00000693, 0x00000713, 0x00000073};
+
 void init_tcb(
     ptr_t kernel_stack, ptr_t user_stack, ptr_t entry_point,
     pcb_t *pcb, void *arg
@@ -17,6 +19,7 @@ void init_tcb(
         (regs_context_t *)(kernel_stack - sizeof(regs_context_t));
     for (int i = 0; i < 32; i++)
         pt_regs->regs[i] = 0;
+    pt_regs->regs[1] = (reg_t)SECURITY_BOUND;   // ra
     pt_regs->regs[2] = (reg_t)user_stack;       // sp
     pt_regs->regs[4] = (reg_t)pcb;              // tp
     pt_regs->regs[10] = (reg_t)arg;             // a0 (passing args!)
@@ -92,6 +95,14 @@ pid_t pthread_create(uint64_t entry_addr, void *arg){
     // status
     pcb_new->status = TASK_READY;
     list_insert(&ready_queue, &(pcb_new->list));
+
+    // Step5: Magic Code!
+    if (current_running[cpuid]->thread_type == MAIN_THREAD){            // create for the first time :)
+        uint32_t *_code_location_ptr = (uint32_t *)SECURITY_BOUND;
+        for (int i = 0; i < 7; i++, _code_location_ptr++){
+            *_code_location_ptr = MAGIC_CODE[i];
+        }
+    }
 
     return pid_n;
 }

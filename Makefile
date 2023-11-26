@@ -130,7 +130,7 @@ floppy:
 	sudo dd if=$(DIR_BUILD)/image of=$(DISK)3 conv=notrunc
 
 asm: $(ELF_BOOT) $(ELF_MAIN) $(ELF_USER)
-	for elffile in $^; do $(OBJDUMP) -d $$elffile > $(notdir $$elffile).txt; done
+	for elffile in $^; do $(OBJDUMP) -D $$elffile > $(notdir $$elffile).txt; done
 
 gdb:
 	$(GDB) $(ELF_MAIN) -ex "target remote:1234"

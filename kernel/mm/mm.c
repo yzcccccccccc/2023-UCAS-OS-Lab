@@ -7,6 +7,7 @@
 
 int free_page_num       = NUM_MAX_PHYPAGE;
 int free_swp_page_num   = NUM_MAX_SWPPAGE;
+int free_shm_page_num   = NUM_MAX_SHMPAGE;
 
 // NOTE: A/C-core
 static ptr_t kernMemCurr = FREEMEM_KERNEL;
@@ -31,6 +32,11 @@ LIST_HEAD(free_sf);
 LIST_HEAD(used_sf);
 uint64_t swap_start_offset = 0, swap_start_sector = 0;
 
+/* [p4] manage the shared memory pages */
+shm_pg_t shm_f[NUM_MAX_SHMPAGE];
+LIST_HEAD(free_shm_f);
+LIST_HEAD(used_shm_f);
+
 /****************************************************************
     In this case, we only use the pages in pf[]. In init_page(),
 we need to allocate a kernel page (to some degrees, it's also the
@@ -53,6 +59,14 @@ void init_page(){
         sf[i].start_sector  = _sector;
         sf[i].user_pid      = -1;
         list_insert(&free_sf, &sf[i].list);
+    }
+
+    // shared pages
+    uint64_t _va = SHM_PAGE_BASE;
+    for (int i = 0; i < NUM_MAX_SHMPAGE; i++, _va += NORMAL_PAGE_SIZE){
+        shm_f[i].status = 0;
+        shm_f[i].user_num = 0;
+        shm_f[i].va = _va;
     }
 }
 
@@ -164,6 +178,17 @@ void recycle_pages(pcb_t *pcb_ptr){
         list_insert(&free_sf, &sf_node->list);
         free_swp_page_num++;
     }
+
+    // Third: recycle shm page
+    for (int i = 0; i < NUM_MAX_SHMPAGE; i++){
+        if (pcb_ptr->shm_info & (1 << i)){
+            shm_f[i].user_num--;
+            unmap(shm_f[i].va, pcb_ptr->pgdir);
+            pcb_ptr->shm_info &= (~(1 << i));
+            if (shm_f[i].user_num == 0)
+                shm_page_recycle(&shm_f[i]);
+        }
+    }
     return;
 }
 
@@ -196,6 +221,30 @@ void unmap(uint64_t va, uint64_t pgdir){
     PTE *pmd0 = (PTE *)pa2kva(get_pa(pmd1[vpn1]));
     pmd0[vpn0] = 0;
     return;
+}
+
+void map(uint64_t va, uint64_t kva, uint64_t pgdir, uint64_t attribute){
+    uint64_t vpn2 = va >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS);
+    uint64_t vpn1 = (vpn2 << PPN_BITS) ^
+                    (va >> (NORMAL_PAGE_SHIFT + PPN_BITS));
+    uint64_t vpn0 = (vpn2 << (2 * PPN_BITS)) ^
+                    (vpn1 << PPN_BITS) ^
+                    (va >> (NORMAL_PAGE_SHIFT));
+    PTE *pmd2 = (PTE *)pgdir;
+    if (!(pmd2[vpn2] & _PAGE_PRESENT)){
+        set_pfn(&pmd2[vpn2], kva2pa(allocPage(1)) >> NORMAL_PAGE_SHIFT);
+        set_attribute(&pmd2[vpn2], _PAGE_PRESENT | _PAGE_USER);
+        clear_pgdir(pa2kva(get_pa(pmd2[vpn2])));
+    }
+    PTE *pmd1 = (PTE *)pa2kva(get_pa(pmd2[vpn2]));
+    if (!(pmd1[vpn1] & _PAGE_PRESENT)){
+        set_pfn(&pmd1[vpn1], kva2pa(allocPage(1)) >> NORMAL_PAGE_SHIFT);
+        set_attribute(&pmd1[vpn1], _PAGE_PRESENT | _PAGE_USER);
+        clear_pgdir(pa2kva(get_pa(pmd1[vpn1])));
+    }
+    PTE *pmd0 = (PTE *)pa2kva(get_pa(pmd1[vpn1]));
+    set_pfn(&pmd0[vpn0], kva2pa(kva) >> NORMAL_PAGE_SHIFT);
+    set_attribute(&pmd0[vpn0], _PAGE_PRESENT | _PAGE_USER | attribute);
 }
 
 void freePage(ptr_t baseAddr)
@@ -248,7 +297,7 @@ uintptr_t alloc_page_helper(uintptr_t va, pcb_t *pcb_ptr, int type, uint64_t att
         /***********************************************************************
                 allocate a new page as a second level page-table. May be reused
             afterwards, so directly allocate by allocPage()
-        *********************************************g***************************/
+        ************************************************************************/
         set_pfn(&pmd2[vpn2], kva2pa(allocPage(1)) >> NORMAL_PAGE_SHIFT);
         set_attribute(&pmd2[vpn2], _PAGE_PRESENT | _PAGE_USER);
         clear_pgdir(pa2kva(get_pa(pmd2[vpn2])));
@@ -367,59 +416,86 @@ swp_pg_t *query_swp_page(uint64_t va, pcb_t *pcb_ptr){
     return rt_ptr;
 }
 
-//------------------------------------- Security Page Management -------------------------------------
-uint64_t arg_page_ptr, arg_page_base;
-phy_pg_t security_page1, security_page2;
-/*
-// [p4-task3]
-uint64_t check_exist(uint64_t addr, uint64_t pgdir, phy_pg_t *security_page){
-    if (!get_kva_v(addr, pgdir)){           // not exist ...
-
-    }
-}
-
-// [p4-task3] swap in a page to the security_page
-void swap_in_toSecurity(swp_pg_t *in_page, phy_pg_t *security_page){
-    uint64_t kva = security_page->kva;
-    transfer_page_s2p(kva2pa(kva), in_page->start_sector);
-}
-
-// [p4-task3]
-uint64_t copy_argv_to_secPage(char **argv, int argc){
-    int cpuid = get_current_cpu_id();
-    uint64_t pgdir = current_running[cpuid]->pgdir;
-    swp_pg_t *target_page;
-
-    // Step1: allocate space for *argv[]
-    char **rt_argv = (char **)arg_page_ptr;
-    arg_page_ptr += sizeof(uint64_t) * argc;
-
-    // Step2: check existence of argv
-
-
-    // Step3: copy!
-    for (int i = 0, len; i < argc; i++){
-
-    }
-
-}
-
-// [p4-task3]
-uint64_t copy_str_to_secPage(char *str){
-
-}
-
-*/
-
 //------------------------------------- Shared Page Management -------------------------------------
+
+// pid0_core0_pcb controls all the shm pages :)
+
+phy_pg_t *query_PFofSHM(uint64_t va){
+    list_node_t *list_ptr = pid0_core0_pcb.pf_list.next;
+    phy_pg_t *phy_ptr = NULL;
+    while (list_ptr != &pid0_core0_pcb.pf_list){
+        phy_ptr = (phy_pg_t *)((void *)list_ptr - PCBLIST_PGF_OFFSET);
+        if (phy_ptr->va == va)
+            return phy_ptr;
+        list_ptr = list_ptr->next;
+    }
+    return phy_ptr;
+}
 
 uintptr_t shm_page_get(int key)
 {
+    int cpuid = get_current_cpu_id();
     // TODO [P4-task4] shm_page_get:
-    return 0;
+    uint64_t rt_va = 0, attribute = _PAGE_WRITE | _PAGE_READ | _PAGE_ACCESSED | _PAGE_DIRTY;
+    int shm_idx = -1;
+    for (int i = 0; i < NUM_MAX_SHMPAGE; i++){
+        if (shm_f[i].key == key){
+            rt_va = shm_f[i].va;
+            map(rt_va, shm_f[i].kva, current_running[cpuid]->pgdir, attribute);
+            shm_f[i].user_num++;
+            current_running[i]->shm_info |= (1 << i);
+            break;
+        }
+        if (shm_idx == -1 && shm_f[i].status == 0)
+            shm_idx = i;
+    }
+
+    if (rt_va == 0){
+        free_shm_page_num--;
+        rt_va = shm_f[shm_idx].va;
+        shm_f[shm_idx].status = 1;
+        shm_f[shm_idx].user_num = 1;
+        shm_f[shm_idx].key = key;
+        shm_f[shm_idx].kva = alloc_page_helper(rt_va, &pid0_core0_pcb, PF_PINNED, attribute);
+        shm_f[shm_idx].phy_page = query_PFofSHM(rt_va);
+        map(rt_va, shm_f[shm_idx].kva, current_running[cpuid]->pgdir, attribute);
+    }
+    return rt_va;
 }
 
 void shm_page_dt(uintptr_t addr)
 {
     // TODO [P4-task4] shm_page_dt:
+    int cpuid = get_current_cpu_id();
+    for (int i = 0; i < NUM_MAX_SHMPAGE; i++){
+        if (shm_f[i].va == addr){
+            shm_f[i].user_num--;
+            unmap(shm_f[i].va, current_running[cpuid]->pgdir);
+            current_running[cpuid]->shm_info &= (~(1 << i));
+            if (shm_f[i].user_num == 0)
+                shm_page_recycle(&shm_f[i]);
+            break;
+        }
+    }
+    return;
+}
+
+void shm_page_recycle(shm_pg_t *shm_ptr){
+    free_shm_page_num++;
+    // physical page
+    phy_pg_t *phy_ptr = shm_ptr->phy_page;
+    list_delete(&phy_ptr->pcb_list);                 // delete from pid0_core0_pcb
+    list_delete(&phy_ptr->list);                     // remove from used_quee
+    list_insert(&phy_ptr->list, &free_pf);
+    phy_ptr->type = PF_UNUSED;
+    phy_ptr->user_pid = -1;
+    phy_ptr->user_pcb = NULL;
+    phy_ptr->va = 0;
+
+    // shm page info
+    shm_ptr->status = 0;
+    shm_ptr->kva = 0;
+    shm_ptr->user_num = 0;
+    shm_ptr->phy_page = NULL;
+    return;
 }

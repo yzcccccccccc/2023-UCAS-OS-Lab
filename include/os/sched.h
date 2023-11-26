@@ -115,6 +115,9 @@ typedef struct pcb
     /* name */
     char name[MAX_NAME_LEN];
 
+    /* occupied shared memory info */
+    uint64_t shm_info;                              // use the bits to mark the occupation, 64 bits
+
     /* [p4] page dir */
     uintptr_t pgdir;                // pgdir, saved as kva
 } pcb_t;

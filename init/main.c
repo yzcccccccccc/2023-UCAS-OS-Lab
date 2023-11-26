@@ -134,6 +134,7 @@ static void init_pcb(void)
     pcb[shell_pid].mask = 0x3;                  // both core can exec
 
     /* TODO: [p2-task1] remember to initialize 'current_running' */
+    pid0_core0_pcb.pf_list.next = pid0_core0_pcb.pf_list.prev = &(pid0_core0_pcb.pf_list);
     pid0_core0_pcb.status = TASK_RUNNING;
     pid0_core0_pcb.pgdir  = pa2kva(PGDIR_PA);
     current_running[0] = &pid0_core0_pcb;
@@ -188,6 +189,9 @@ static void init_syscall(void)
     syscall[SYSCALL_MBOX_SEND]          = (long (*)())do_mbox_send;
 
     syscall[SYSCALL_TASKSET]            = (long (*)())do_taskset;
+
+    syscall[SYSCALL_SHM_DT]             = (long (*)())shm_page_dt;
+    syscall[SYSCALL_SHM_GET]            = (long (*)())shm_page_get;
 }
 /************************************************************/
 

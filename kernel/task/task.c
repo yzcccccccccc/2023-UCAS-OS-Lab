@@ -151,6 +151,9 @@ pid_t init_pcb_vname(char *name, int argc, char *argv[]){
         pcb_new->par = NULL;
         pcb_new->thread_type = MAIN_THREAD;
 
+        // [p4] shm pages
+        pcb_new->shm_info = 0;
+
         // [p3] CPU mask
         if (current_running[cpuid] == NULL)
             pcb_new->mask = 0x3;                            // both cores can execute

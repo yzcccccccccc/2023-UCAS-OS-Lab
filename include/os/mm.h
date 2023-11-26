@@ -38,18 +38,20 @@
 #define PAGE_SIZE 4096 // 4K
 #define INIT_KERNEL_STACK 0xffffffc052000000
 #define FREEMEM_KERNEL (INIT_KERNEL_STACK+4*PAGE_SIZE)
+#define SHM_PAGE_BASE   0x80000000                      // virtual addr of the base of shared memory pages
 
 /* Rounding; only works for n = power of two */
 #define ROUND(a, n)     (((((uint64_t)(a))+(n)-1)) & ~((n)-1))
 #define ROUNDDOWN(a, n) (((uint64_t)(a)) & ~((n)-1))
 
 /* [p4] page-frame management */
-#define NUM_MAX_PHYPAGE     10
+#define NUM_MAX_PHYPAGE     100
 #define NUM_MAX_SWPPAGE     1024
+#define NUM_MAX_SHMPAGE     64
 #define LIST_PGF_OFFSET     16
 #define PCBLIST_PGF_OFFSET  32
 
-extern int free_page_num, free_swp_page_num;
+extern int free_page_num, free_swp_page_num, free_shm_page_num;
 
 typedef enum{
     PF_UNPINNED,
@@ -99,6 +101,16 @@ extern swp_pg_t sf[NUM_MAX_SWPPAGE];
 extern list_head free_sf, used_sf;
 extern uint64_t swap_start_offset, swap_start_sector;
 
+// [p4] for managing the shared memory pages
+typedef struct shm_pg{
+    uint64_t va, kva;
+    int key;
+    int user_num;                               // how many users?
+    int status;                                 // 0: in use, 1: not use
+    phy_pg_t *phy_page;
+}shm_pg_t;
+extern shm_pg_t shm_f[NUM_MAX_SHMPAGE];
+
 extern ptr_t allocPage(int numPage);
 extern ptr_t allocPage_from_freePF(int type, pcb_t *pcb_ptr, uint64_t va, uint64_t attribute);
 extern void init_page();
@@ -138,10 +150,7 @@ extern void unmap_boot();
 // TODO [P4-task4]: shm_page_get/dt */
 uintptr_t shm_page_get(int key);
 void shm_page_dt(uintptr_t addr);
-
-// [p4-task3]: security page
-extern uint64_t do_security_page_ac();
-extern uint64_t do_security_page_rl(uint64_t va);
+void shm_page_recycle(shm_pg_t *shm_ptr);
 
 //------------------------------------- Security Page Management -------------------------------------
 /*************************************************************************************
@@ -173,13 +182,6 @@ extern uint64_t do_security_page_rl(uint64_t va);
 **************************************************************************************/
 
 #define SECURITY_BASE   0x5000
-
-#define RESET_ARG_PAGE_PTR (arg_page_ptr = arg_page_base)
-extern uint64_t arg_page_ptr, arg_page_base;
-extern phy_pg_t security_page1, security_page2;
-
-extern void swap_in_toSecurity(swp_pg_t *in_page, phy_pg_t *security_page);
-extern uint64_t copy_argv_to_secPage(char **argv, int argc);
-extern uint64_t copy_str_to_secPage(char *str);
+#define SECURITY_BOUND  0x5f00
 
 #endif /* MM_H */
