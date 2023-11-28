@@ -21,27 +21,25 @@ void interrupt_helper(regs_context_t *regs, uint64_t stval, uint64_t scause)
     uint64_t func_code = scause & ~SCAUSE_IRQ_FLAG;
     handler_t handler;
     
-    uint64_t sepc = regs->sepc;
-    uint64_t ra = regs->regs[1];
-    if ((ra & 0xf00000000) == 0xf00000000){
-        handle_other(regs, stval, scause);
+    int cpuid = get_current_cpu_id();
+    // check status (may be killed by another core)
+    if (current_running[cpuid]->status == TASK_EXITED){
+        do_scheduler();
     }
-    if ((sepc & 0xf00000000) == 0xf00000000){
-        handle_other(regs, stval, scause);
-    }
+    else {
+        if (irq_flag){                                  // interrupt
+            handler = irq_table[func_code];
+        }
+        else{                                           // exception
+            handler = exc_table[func_code];
+        }
 
-    if (irq_flag){                                  // interrupt
-        handler = irq_table[func_code];
-    }
-    else{                                           // exception
-        handler = exc_table[func_code];
-    }
+        handler(regs, stval, scause);
 
-    handler(regs, stval, scause);
-
-    // [p4]
-    local_flush_tlb_all();
-    local_flush_icache_all();
+        // [p4]
+        local_flush_tlb_all();
+        local_flush_icache_all();
+    }
 }
 
 void handle_irq_timer(regs_context_t *regs, uint64_t stval, uint64_t scause)
@@ -117,17 +115,10 @@ void handle_page_fault(regs_context_t *regs, uint64_t stval, uint64_t scause){
     return;
 }
 
-// Situation1: core0 kill core1's process
-// Situation2: core0 swap out core1's page
+// [p4] core0 swap out core1's page
 void handle_ipi(regs_context_t *regs, uint64_t stval, uint64_t scause){
-    int cpuid = get_current_cpu_id();
-    if (current_running[cpuid]->status == TASK_EXITED){         // killed by another core :(
-        do_scheduler();
-    }
-    else{
-        local_flush_tlb_all();
-        local_flush_icache_all();
-    }
+    local_flush_icache_all();
+    local_flush_tlb_all();
     clear_SIP();
     return;
 }

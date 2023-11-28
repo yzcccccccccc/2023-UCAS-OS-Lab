@@ -16,7 +16,7 @@ extern uint64_t malloc_secPage(int size);
 extern uint64_t copy_argv_to_secPage(char *argv[], int argc);
 extern uint64_t copy_str_to_secPage(char *str);
 extern void copy_secPage_to_ptr(void *secPage_ptr, void *ptr, int len);
-extern void check_secPage_mlock();
+extern void init_secPage_mlock();
 
 
 #endif

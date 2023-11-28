@@ -38,6 +38,8 @@ void init_tcb(
 // [p4-task4] create a thread
 pid_t pthread_create(uint64_t entry_addr, void *arg){
     int cpuid = get_current_cpu_id();
+    if (current_running[cpuid]->thread_type == SUB_THREAD)          // sub threads are not allowed to pthread_create
+        return 0;
 
     // Step1: Find an available pcb
     int avail_idx = 0;

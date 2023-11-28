@@ -8,13 +8,14 @@ int secPage_mlock_handle = -1;
 
 // [p4-task3]
 uint64_t malloc_secPage(int size){
-    check_secPage_mlock();
-    sys_mutex_acquire(secPage_mlock_handle);
+    int mlock_req = (secPage_mlock_handle != -1);
+    if (mlock_req)  sys_mutex_acquire(secPage_mlock_handle);
+    // critical section
     if (secPage_ptr + size > SECURITY_BOUND)
         RESET_SECPAGE_PTR;
     uint64_t rt_addr = secPage_ptr;
     secPage_ptr += size;
-    sys_mutex_release(secPage_mlock_handle);
+    if (mlock_req)  sys_mutex_release(secPage_mlock_handle);
     return rt_addr;
 }
 
@@ -44,9 +45,9 @@ void copy_secPage_to_ptr(void *secPage_ptr, void *ptr, int len){
     }
 }
 
-void check_secPage_mlock(){
-    if (secPage_mlock_handle == -1){            // init the lock!
-        int cur_pid = sys_getpid();
-        secPage_mlock_handle = sys_mutex_init(cur_pid + MAGIC_NUM);
-    }
+void init_secPage_mlock(){
+    if (secPage_mlock_handle != -1) 
+        return;
+    int cur_pid = sys_getpid();
+    secPage_mlock_handle = sys_mutex_init(cur_pid + MAGIC_NUM);
 }
