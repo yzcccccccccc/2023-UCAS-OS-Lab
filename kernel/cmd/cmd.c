@@ -3,6 +3,7 @@
 #include <printk.h>
 #include <os/string.h>
 #include <os/smp.h>
+#include <os/mm.h>
 
 #define NAME_LEN_SPACE 20
 
@@ -22,7 +23,7 @@ void do_process_show(){
 
     /* Table Body */
     for (int i = 1, len; i < TASK_MAXNUM; i++){
-        if (pcb[i].pid == 0)
+        if (pcb[i].pid == 0 || pcb[i].status == TASK_EXITED)
             continue;
         // pid
         printk("%03d", pcb[i].pid);
@@ -37,7 +38,8 @@ void do_process_show(){
         printk("%s", (pcb[i].status == TASK_BLOCKED ? "BLOCKED"
                 : pcb[i].status == TASK_READY ? "READY  "
                 : pcb[i].status == TASK_RUNNING ? "RUNNING"
-                : "EXITED "));
+                : pcb[i].status == TASK_EXITED ? "EXITED "
+                : "ZOMBIED"));
 
         // CPUID
         if (pcb[i].status == TASK_RUNNING){
@@ -61,6 +63,51 @@ void do_process_show(){
         else
             printk("       %d\n", pcb[i].par->pid);
     }
+}
+
+// [p4] personel: memory show
+#define SCALER_NUM      50
+#define SCALE           2           // 100/SCALER_NUM
+void do_memory_show(){
+    printk("[Memory :D] \n");
+    int percent, scale_percent;
+
+    // Physical Pages
+    percent = (1000 * (NUM_MAX_PHYPAGE - free_page_num) / NUM_MAX_PHYPAGE);
+    scale_percent = percent / 10;
+    printk("Physical    Pages: [");
+    for (int i = 0; i < SCALER_NUM; i++){
+        if (i * SCALE < scale_percent)
+            printk("|");
+        else
+            printk(" ");
+    }
+    printk("] %d.%d%%\n", percent / 10, percent % 10);
+
+    // Swap Pages
+    percent = (1000 * (NUM_MAX_SWPPAGE - free_swp_page_num) / NUM_MAX_SWPPAGE);
+    scale_percent = percent / 10;
+    printk("Swap        Pages: [");
+    for (int i = 0; i < SCALER_NUM; i++){
+        if (i * SCALE < scale_percent)
+            printk("|");
+        else
+            printk(" ");
+    }
+    printk("] %d.%d%%\n", percent / 10, percent % 10);
+
+    // Shared Pages
+    percent = (1000 * (NUM_MAX_SHMPAGE - free_shm_page_num) / NUM_MAX_SHMPAGE);
+    scale_percent = percent / 10;
+    printk("Shared      Pages: [");
+    for (int i = 0; i < SCALER_NUM; i++){
+        if (i * SCALE < scale_percent)
+            printk("|");
+        else
+            printk(" ");
+    }
+    printk("] %d.%d%%\n", percent / 10, percent % 10);
+    return;
 }
 
 pid_t do_exec(char *name, int argc, char *argv[]){

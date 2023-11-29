@@ -6,7 +6,7 @@
 #include <os/kernel.h>
 #include <os/smp.h>
 
-#define SCREEN_WIDTH    80
+#define SCREEN_WIDTH    100
 #define SCREEN_HEIGHT   50
 #define SCREEN_LOC(x, y) ((y) * SCREEN_WIDTH + (x))
 

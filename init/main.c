@@ -192,6 +192,7 @@ static void init_syscall(void)
 
     syscall[SYSCALL_SHM_DT]             = (long (*)())shm_page_dt;
     syscall[SYSCALL_SHM_GET]            = (long (*)())shm_page_get;
+    syscall[SYSCALL_MS]                 = (long (*)())do_memory_show;
 }
 /************************************************************/
 

@@ -44,5 +44,6 @@
 #define SYSCALL_CURSOR_C 27
 #define SYSCALL_TASKSET 28
 #define SYSCALL_THREAD_JOIN 29
+#define SYSCALL_MS  8
 
 #endif

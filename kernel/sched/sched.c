@@ -9,6 +9,7 @@
 #include <screen.h>
 #include <printk.h>
 #include <assert.h>
+#include <stdrtv.h>
 
 
 pcb_t pcb[NUM_MAX_TASK];
@@ -132,7 +133,7 @@ void do_unblock(list_node_t *pcb_node)
 void do_exit(){                                         /* Exit current-running */
     // [p3-multicore]
     int cpuid = get_current_cpu_id();
-    int rtval = do_kill(current_running[cpuid]->pid);
+    int rtval = do_kill_ptr(current_running[cpuid]);
     if (!rtval){
         printk("\n[Error] Fail to Exit. Please Restart. \n");
         while (1){
@@ -145,58 +146,69 @@ void do_exit(){                                         /* Exit current-running 
 
 int do_kill(pid_t pid){                                 /* Kill process of certain pid */
     // [p3-multicore]
-    int cpuid = get_current_cpu_id();
-    int suc = 0;
+    int rtv = 0;
     for (int i = 1; i < TASK_MAXNUM; i++){
-        if (pcb[i].pid == pid && pcb[i].status != TASK_EXITED){
-            suc = 1;
-
-            // sub-thread?
-            if (pcb[i].thread_type == SUB_THREAD)
-                pcb[i].par->tid--;
-
-            // kill another?
-            int other_cpu = cpuid ^ 1;
-            if (current_running[other_cpu] == &pcb[i])
-                send_ipi(&cpu_mask_arr[other_cpu]);
-
-            /* Release waiting list */
-            list_node_t *ptr;
-            pcb_t *pcb_ptr;
-            while (!list_empty(&(pcb[i].wait_list))){
-                ptr = list_pop(&(pcb[i].wait_list));
-                pcb_ptr = (pcb_t *)((void *)ptr - LIST_PCB_OFFSET);
-                if (pcb_ptr->status == TASK_BLOCKED)
-                    do_unblock(ptr);
-            }
-
-            /* Release locks */
-            lock_resource_release(pcb[i].pid);
-
-            /*************************************************
-                Hint:
-                the benefit of list_node_t: easy to be del :)
-                    mutex_block_que, sleep_que, pcb_wait_que,
-                cond_wait_que, sema_wait_que ...
-                    All can be released ! :D
-                (list_node_t only belongs to one of them.)
-            *************************************************/
-            list_delete(&(pcb[i].list)); 
-
-            pcb[i].status = TASK_EXITED;
-
-            // [p4] recycle the pages
-            recycle_pages(&pcb[i]);
-
-            if (pid == current_running[cpuid]->pid){               // suicide :(
-                do_scheduler();
-            }
-
-            if (!strcmp("shell", pcb[i].name)){             // shell will revive :)
-                init_pcb_vname("shell", 0, NULL);
-            }
+        if (pcb[i].pid == pid){
+            rtv = do_kill_ptr(&pcb[i]);
             break;
         }
+    }
+    return rtv;
+}
+
+int do_kill_ptr(pcb_t *pcb_ptr){
+    int cpuid = get_current_cpu_id(), suc = KILL_FAIL;
+    if (pcb_ptr->status != TASK_EXITED){
+        suc = KILL_SUCCESS;
+
+        // sub-thread?
+        if (pcb_ptr->thread_type == SUB_THREAD){
+            pcb_ptr->par->tid--;
+            if (pcb_ptr->par->status == TASK_ZOMBIE && pcb_ptr->par->tid == 0)
+                hunt_zombie(pcb_ptr->par);
+        }
+
+        // kill another?
+        int other_cpu = cpuid ^ 1;
+        if (current_running[other_cpu] == pcb_ptr)
+            send_ipi(&cpu_mask_arr[other_cpu]);
+
+        // Release waiting list
+        list_node_t *list_cur;
+        pcb_t *pcb_cur;
+        while (!list_empty(&pcb_ptr->wait_list)){
+            list_cur = list_pop(&pcb_ptr->wait_list);
+            pcb_cur = (pcb_t *)((void *)list_cur - LIST_PCB_OFFSET);
+            if (pcb_cur->status == TASK_BLOCKED)
+                do_unblock(list_cur);
+        }
+
+        /*************************************************
+            Hint:
+            the benefit of list_node_t: easy to be del :)
+                mutex_block_que, sleep_que, pcb_wait_que,
+            cond_wait_que, sema_wait_que ...
+                All can be released ! :D
+            (list_node_t only belongs to one of them.)
+        *************************************************/
+        list_delete(&(pcb_ptr->list)); 
+
+        if (pcb_ptr->tid != 0 && pcb_ptr->thread_type == MAIN_THREAD){
+            pcb_ptr->status = TASK_ZOMBIE;
+            suc = KILL_ZOMBIE;
+        }
+        else{
+            pcb_ptr->status = TASK_EXITED;
+
+            // [p4] recycle the pages
+            recycle_pages(pcb_ptr);
+        }
+
+        // Release locks
+        lock_resource_release(pcb_ptr);
+
+        if (!strcmp("shell", pcb_ptr->name))
+            init_pcb_vname("shell", 0, NULL);
     }
     return suc;
 }
@@ -214,4 +226,10 @@ int do_waitpid(pid_t pid){
         }
     }
     return rtval;
+}
+
+void hunt_zombie(pcb_t *pcb_ptr){
+    pcb_ptr->status = TASK_EXITED;
+    recycle_pages(pcb_ptr);
+    lock_resource_release(pcb_ptr);
 }

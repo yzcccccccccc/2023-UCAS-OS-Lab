@@ -328,6 +328,7 @@ uintptr_t alloc_page_helper(uintptr_t va, pcb_t *pcb_ptr, int type, uint64_t att
         *********************************************************************/
         set_pfn(&pmd0[vpn0], kva2pa(allocPage_from_freePF(type, pcb_ptr, va, attribute)) >> NORMAL_PAGE_SHIFT);
         set_attribute(&pmd0[vpn0], _PAGE_PRESENT | _PAGE_USER | attribute);
+        clear_pgdir(pa2kva(get_pa(pmd0[vpn0])));
     }
     return pa2kva(get_pa(pmd0[vpn0]));
 }

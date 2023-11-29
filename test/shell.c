@@ -30,6 +30,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdrtv.h>
 
 #define SHELL_BEGIN 20
 #define SHELL_BUFF_LEN 30
@@ -77,10 +78,14 @@ void ps(){
     sys_ps();
 }
 
+void ms(){
+    sys_ms();
+}
+
 void clear(){
     sys_clear();
     sys_move_cursor(0, SHELL_BEGIN);
-    printf("------------------- COMMAND -------------------\n");
+    printf("------------------------------- COMMAND -------------------------------\n");
     sys_reflush();
 }
 
@@ -143,11 +148,20 @@ void kill(){
         cur++;
     }
     int rtval = sys_kill(pid);
-    if (!rtval){
-        printf("[Info] Fail to kill pid %d. :(\n", pid);
-    }
-    else{
-        printf("[Info] Target pid %d is down! :)\n", pid);
+    switch (rtval) {
+        case KILL_FAIL:
+            printf("[Info] Fail to kill pid %d. :(\n", pid);
+            break;
+        case KILL_SUCCESS:
+            printf("[Info] Target pid %d is down! :)\n", pid);
+            break;
+        case KILL_ZOMBIE:
+            printf("[Info] Target pid %d is zombied! :D\n", pid);
+            printf("[Hint] Children threads are still running.\n");
+            break;
+        default:
+            printf("[Info] Unknown err. (code 0x%x) :(\n", rtval);
+            break;
     }
 }
 
@@ -215,6 +229,10 @@ int check_cmd(){
         ps();
         cmd_found = 1;
     }
+    if (!strcmp(buffer, "ms")){
+        ms();
+        cmd_found = 1;
+    }
     if (!strcmp(buffer, "clear")){
         clear();
         cmd_found = 1;
@@ -266,7 +284,7 @@ int input_handler(int ch){              // 1: need to chk cmd (\r), 0: just cont
 int main(void)
 {
     sys_move_cursor(0, SHELL_BEGIN);
-    printf("------------------- COMMAND -------------------\n");
+    printf("------------------------------- COMMAND -------------------------------\n");
     printf("> root@UCAS_OS: ");
 
     int ch;

@@ -23,6 +23,7 @@ int sys_thread_join(int thread_id);
 /* TODO: [P3 task1] ps, getchar */
 void sys_ps(void);
 int  sys_getchar(void);
+void sys_ms(void);
 
 /* TODO: [P3 task1] exec, exit, kill waitpid */
 // S-core

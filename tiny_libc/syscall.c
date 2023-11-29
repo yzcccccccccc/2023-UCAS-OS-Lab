@@ -164,6 +164,11 @@ void sys_ps(void)
     invoke_syscall(SYSCALL_PS, 0, 0, 0, 0, 0);
 }
 
+void sys_ms(void)
+{
+    invoke_syscall(SYSCALL_MS, 0, 0, 0, 0, 0);
+}
+
 pid_t sys_getpid()
 {
     /* TODO: [p3-task1] call invoke_syscall to implement sys_getpid */

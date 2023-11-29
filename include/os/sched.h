@@ -62,6 +62,7 @@ typedef enum {
     TASK_RUNNING,
     TASK_READY,
     TASK_EXITED,
+    TASK_ZOMBIE,
 } task_status_t;
 
 typedef enum {
@@ -154,9 +155,11 @@ extern pid_t do_exec(char *name, int argc, char *argv[]);
 #endif
 extern void do_exit(void);
 extern int do_kill(pid_t pid);
+extern int do_kill_ptr(pcb_t *pcb_ptr);
 extern int do_waitpid(pid_t pid);
 extern void do_process_show();
 extern pid_t do_getpid();
 /************************************************************/
+extern void hunt_zombie(pcb_t *pcb_ptr);
 
 #endif

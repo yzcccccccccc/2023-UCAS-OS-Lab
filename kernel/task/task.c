@@ -97,7 +97,7 @@ pid_t init_pcb_vname(char *name, int argc, char *argv[]){
     pcb_t* pcb_new = pcb + alloc_pcb_idx;
     uint64_t pgdir = 0;
     // [p4] allocate the pgdir
-    if (pcb_new->status == TASK_UNUSED){       // first allocated
+    if (pcb_new->status == TASK_UNUSED || pcb_new->thread_type == SUB_THREAD){       // first allocated or exit by a sub-thread
         pgdir = allocPage(1);                  // directly alloc, cause this is root page table, may be reused
         share_pgtable(pgdir, pa2kva(PGDIR_PA));
         pcb_new->pgdir = pgdir;

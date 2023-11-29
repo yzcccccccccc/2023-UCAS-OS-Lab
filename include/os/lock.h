@@ -29,6 +29,7 @@
 #define INCLUDE_LOCK_H_
 
 #include <os/list.h>
+#include <os/sched.h>
 
 #define LOCK_NUM 16
 
@@ -63,7 +64,7 @@ int do_mutex_lock_init(int key);
 void do_mutex_lock_acquire(int mlock_idx);
 void do_mutex_lock_release(int mlock_idx);
 
-void lock_resource_release(pid_t pid);
+void lock_resource_release(pcb_t *pcb_ptr);
 void do_mlock_init_ptr(mutex_lock_t *mlock_ptr);
 void do_mlock_release_ptr(mutex_lock_t *mlock_ptr);
 void do_mlock_acquire_ptr(mutex_lock_t *mlock_ptr);

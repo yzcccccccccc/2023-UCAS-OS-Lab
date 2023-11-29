@@ -76,18 +76,19 @@ void do_mutex_lock_release(int mlock_idx)
 }
 
 /* [p3] release lock resources */
-void lock_resource_release(pid_t pid){
+void lock_resource_release(pcb_t *pcb_ptr){
     /*****************************************
         Hint:
             only handle the acquired locks.
             block_queue situation will be 
         handled in do_kill()
     ******************************************/
+    pid_t pid = pcb_ptr->pid;
     for (int i = 0; i < LOCK_NUM; i++){
         if (mlocks[i].pid == pid){
             do_mutex_lock_release(i);
         }
-        if (mlocks[i].key == pid + MLOCK_MAGIC_NUM)         // release the secPage lock
+        if (pcb_ptr->status == TASK_EXITED && mlocks[i].key == pid + MLOCK_MAGIC_NUM)         // release the secPage lock
             mlocks[i].key = -1;
     }
 }

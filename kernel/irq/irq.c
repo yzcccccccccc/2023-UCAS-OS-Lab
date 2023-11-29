@@ -15,6 +15,9 @@ handler_t exc_table[EXCC_COUNT];
 
 void interrupt_helper(regs_context_t *regs, uint64_t stval, uint64_t scause)
 {
+    local_flush_icache_all();
+    local_flush_tlb_all();
+
     // TODO: [p2-task3] & [p2-task4] interrupt handler.
     // call corresponding handler by the value of `scause`
     uint64_t irq_flag = scause & SCAUSE_IRQ_FLAG;
@@ -23,7 +26,7 @@ void interrupt_helper(regs_context_t *regs, uint64_t stval, uint64_t scause)
     
     int cpuid = get_current_cpu_id();
     // check status (may be killed by another core)
-    if (current_running[cpuid]->status == TASK_EXITED){
+    if (current_running[cpuid]->status == TASK_EXITED || current_running[cpuid]->status == TASK_ZOMBIE){
         do_scheduler();
     }
     else {
