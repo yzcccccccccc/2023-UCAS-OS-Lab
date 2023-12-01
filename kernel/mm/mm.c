@@ -152,10 +152,6 @@ void recycle_pages(pcb_t *pcb_ptr){
         // unmap
         unmap(pf_node->va & VA_MASK, pgdir);
 
-        // check shm (va in shm?)
-        if (pf_node->va >= SHM_PAGE_BASE && pf_node->va < SHM_PAGE_BOUND)
-            shm_f[(pf_node->va - SHM_PAGE_BASE) / NORMAL_PAGE_SIZE].status = SHM_UNUSED;         // release
-
         pf_node->va = 0;
         pf_node->user_pid = -1;
         pf_node->user_pcb = NULL;
@@ -190,7 +186,7 @@ void recycle_pages(pcb_t *pcb_ptr){
             _kva = get_kva_v(_va, pcb_ptr->pgdir);
             if (!_kva)
                 continue;                   // continue if this is not a shm_Page
-
+            
             // get the location in shm_f
             idx = query_SHM_kva(_kva);
             
@@ -509,7 +505,7 @@ void shm_page_dt(uintptr_t addr)
 {
     // TODO [P4-task4] shm_page_dt:
     int cpuid = get_current_cpu_id();
-    uint64_t _kva = get_kva_v(addr, current_running[cpuid]->pgdir);
+    uint64_t _kva = get_kva_v(get_vf(addr), current_running[cpuid]->pgdir);
     int idx = (addr - SHM_PAGE_BASE) / NORMAL_PAGE_SIZE;
     current_running[cpuid]->shm_info &= (~(1 << idx));
     for (int i = 0; i < NUM_MAX_SHMPAGE; i++){
@@ -526,6 +522,7 @@ void shm_page_dt(uintptr_t addr)
 
 void shm_page_recycle(shm_pg_t *shm_ptr){
     free_shm_page_num++;
+
     // physical page
     phy_pg_t *phy_ptr = shm_ptr->phy_page;
     list_delete(&phy_ptr->pcb_list);                 // delete from pid0_core0_pcb
