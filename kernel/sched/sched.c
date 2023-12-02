@@ -50,7 +50,7 @@ void do_scheduler(void)
     check_sleeping();
     
     /************************************************************/
-    /* Do not touch this comment. Reserved for future projects. */
+    // TODO: [p5-task3] Check send/recv queue to unblock PCBs
     /************************************************************/
 
     pcb_t *prev = current_running[cpu_id];
