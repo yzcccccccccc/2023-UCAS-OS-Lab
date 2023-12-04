@@ -98,7 +98,7 @@ pid_t pthread_create(uint64_t entry_addr, void *arg){
     pcb_new->status = TASK_READY;
     list_insert(&ready_queue, &(pcb_new->list));
 
-    // Step5: Magic Code!
+    // Step6: Magic Code!
     if (current_running[cpuid]->thread_type == MAIN_THREAD){            // create for the first time :)
         uint32_t *_code_location_ptr = (uint32_t *)SECURITY_BOUND;
         for (int i = 0; i < 7; i++, _code_location_ptr++){

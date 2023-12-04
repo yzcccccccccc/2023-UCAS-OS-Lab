@@ -280,12 +280,17 @@ int sys_mbox_send(int mbox_idx, void *msg, int msg_length)
 int sys_mbox_recv(int mbox_idx, void *msg, int msg_length)
 {
     /* [p4-task3] */
-    uint64_t tmp_msg_ptr = malloc_secPage(msg_length);
+    int mlock_req = (secPage_mlock_handle != -1);
+    if (mlock_req)  sys_mutex_acquire(secPage_mlock_handle);
+    uint64_t tmp_msg_ptr = malloc_secPage(msg_length + 1);
+    if (mlock_req)  sys_mutex_release(secPage_mlock_handle);
 
     /* TODO: [p3-task2] call invoke_syscall to implement sys_mbox_recv */
     int rtval = invoke_syscall(SYSCALL_MBOX_RECV, (long)mbox_idx, (long)tmp_msg_ptr, (long)msg_length, 0, 0);
 
+    if (mlock_req)  sys_mutex_acquire(secPage_mlock_handle);
     copy_secPage_to_ptr((void *)tmp_msg_ptr, msg, msg_length);
+    if (mlock_req)  sys_mutex_release(secPage_mlock_handle);
     return rtval;
 }
 /************************************************************/
