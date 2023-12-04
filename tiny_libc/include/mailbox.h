@@ -5,7 +5,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 
-#define MAX_MBOX_LENGTH (16)
+#define MAX_MBOX_LENGTH (64)
 
 typedef struct MsgHeader
 {

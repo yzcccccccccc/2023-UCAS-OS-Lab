@@ -53,6 +53,8 @@ void sys_write(char *buff)
 
     /* TODO: [p2-task3] call invoke_syscall to implement sys_write */
     invoke_syscall(SYSCALL_WRITE, (long)buff, 0, 0, 0, 0);
+
+    free_secPage((uint64_t)buff);
 }
 
 void sys_reflush(void)
@@ -135,7 +137,11 @@ pid_t  sys_exec(char *name, int argc, char **argv)
     argv = (char **)copy_argv_to_secPage(argv, argc);
 
     /* TODO: [p3-task1] call invoke_syscall to implement sys_exec */
-    return invoke_syscall(SYSCALL_EXEC, (long)name, (long)argc, (long)argv, 0, 0);
+    pid_t rtval = invoke_syscall(SYSCALL_EXEC, (long)name, (long)argc, (long)argv, 0, 0);
+
+    free_secPage((uint64_t)name);
+    free_secPage((uint64_t)argv);
+    return rtval;
 }
 #endif
 
@@ -259,7 +265,10 @@ int sys_mbox_open(char * name)
     name = (char *)copy_str_to_secPage(name);
 
     /* TODO: [p3-task2] call invoke_syscall to implement sys_mbox_open */
-    return invoke_syscall(SYSCALL_MBOX_OPEN, (long)name, 0, 0, 0, 0);
+    int rtval =  invoke_syscall(SYSCALL_MBOX_OPEN, (long)name, 0, 0, 0, 0);
+
+    free_secPage((uint64_t)name);
+    return rtval;
 }
 
 void sys_mbox_close(int mbox_id)
@@ -271,26 +280,26 @@ void sys_mbox_close(int mbox_id)
 int sys_mbox_send(int mbox_idx, void *msg, int msg_length)
 {
     /* [p4-task3] */
-    msg = (void *)copy_str_to_secPage((char *)msg);
+    uint64_t tmp_msg_ptr = malloc_secPage(msg_length + 1);
+    copy_ptr_to_secPage((void *)tmp_msg_ptr, msg, msg_length);
 
     /* TODO: [p3-task2] call invoke_syscall to implement sys_mbox_send */
-    return invoke_syscall(SYSCALL_MBOX_SEND, (long)mbox_idx, (long)msg, (long)msg_length, 0, 0);
+    int rtval = invoke_syscall(SYSCALL_MBOX_SEND, (long)mbox_idx, (long)tmp_msg_ptr, (long)msg_length, 0, 0);
+
+    free_secPage((uintptr_t)tmp_msg_ptr);
+    return rtval;
 }
 
 int sys_mbox_recv(int mbox_idx, void *msg, int msg_length)
 {
     /* [p4-task3] */
-    int mlock_req = (secPage_mlock_handle != -1);
-    if (mlock_req)  sys_mutex_acquire(secPage_mlock_handle);
     uint64_t tmp_msg_ptr = malloc_secPage(msg_length + 1);
-    if (mlock_req)  sys_mutex_release(secPage_mlock_handle);
 
     /* TODO: [p3-task2] call invoke_syscall to implement sys_mbox_recv */
     int rtval = invoke_syscall(SYSCALL_MBOX_RECV, (long)mbox_idx, (long)tmp_msg_ptr, (long)msg_length, 0, 0);
 
-    if (mlock_req)  sys_mutex_acquire(secPage_mlock_handle);
     copy_secPage_to_ptr((void *)tmp_msg_ptr, msg, msg_length);
-    if (mlock_req)  sys_mutex_release(secPage_mlock_handle);
+    free_secPage(tmp_msg_ptr);
     return rtval;
 }
 /************************************************************/
@@ -300,7 +309,10 @@ int sys_taskset(char *name, int mask, int pid){
     name = (char *)copy_str_to_secPage(name);
 
     /* [p3-task5] taskset */
-    return invoke_syscall(SYSCALL_TASKSET, (long)name, (long)mask, (long)pid, 0, 0);
+    int rtval = invoke_syscall(SYSCALL_TASKSET, (long)name, (long)mask, (long)pid, 0, 0);
+
+    free_secPage((uint64_t)name);
+    return rtval;
 }
 
 void* sys_shmpageget(int key)

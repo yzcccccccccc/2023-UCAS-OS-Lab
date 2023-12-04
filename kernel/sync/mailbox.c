@@ -1,6 +1,8 @@
 #include <os/smp.h>
 #include <os/sync.h>
 #include <os/string.h>
+#include <os/time.h>
+#include <printk.h>
 
 mailbox_t mbox[MBOX_NUM];
 

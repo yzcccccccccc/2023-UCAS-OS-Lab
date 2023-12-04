@@ -208,7 +208,7 @@ int main(int argc, char* argv[])
 
     fill_buffer();
 
-    for(;;){
+    //for(;;){
         pthread_t recv;
         pthread_create(&recv, recv_thread, (void*)(unsigned long)id);
 
@@ -216,7 +216,7 @@ int main(int argc, char* argv[])
         send_thread((void*)(unsigned long)id);
 
         pthread_join(recv);
-    }
+    //}
 
     return 0;
 }
