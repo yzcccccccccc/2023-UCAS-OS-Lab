@@ -45,6 +45,13 @@ void copy_secPage_to_ptr(void *secPage_ptr, void *ptr, int len){
     }
 }
 
+// [p4-task3]
+void copy_ptr_to_secPage(void *secPage_ptr, void *ptr, int len){
+    for (int i = 0; i < len; i++){
+        *(char *)(secPage_ptr + i) = *(char *)(ptr + i);
+    }
+}
+
 void init_secPage_mlock(){
     if (secPage_mlock_handle != -1) 
         return;

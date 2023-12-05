@@ -271,10 +271,11 @@ void sys_mbox_close(int mbox_id)
 int sys_mbox_send(int mbox_idx, void *msg, int msg_length)
 {
     /* [p4-task3] */
-    msg = (void *)copy_str_to_secPage((char *)msg);
+    uint64_t tmp_msg_ptr = malloc_secPage(msg_length + 1);
+    copy_ptr_to_secPage((void *)tmp_msg_ptr, msg, msg_length);
 
     /* TODO: [p3-task2] call invoke_syscall to implement sys_mbox_send */
-    return invoke_syscall(SYSCALL_MBOX_SEND, (long)mbox_idx, (long)msg, (long)msg_length, 0, 0);
+    return invoke_syscall(SYSCALL_MBOX_SEND, (long)mbox_idx, (long)tmp_msg_ptr, (long)msg_length, 0, 0);
 }
 
 int sys_mbox_recv(int mbox_idx, void *msg, int msg_length)
