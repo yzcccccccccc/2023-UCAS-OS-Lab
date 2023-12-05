@@ -5,6 +5,8 @@
 #include <assert.h>
 #include <pgtable.h>
 
+#define LOW32_MASK  0xffffffff
+
 // E1000 Registers Base Pointer
 volatile uint8_t *e1000;  // use virtual memory address
 
@@ -55,12 +57,30 @@ static void e1000_reset(void)
 static void e1000_configure_tx(void)
 {
     /* TODO: [p5-task1] Initialize tx descriptors */
+    for (int i = 0; i < TXDESCS; i++){
+        tx_desc_array[i].addr       = kva2pa((uint64_t)tx_pkt_buffer[i]);
+        tx_desc_array[i].length     = 0;
+        tx_desc_array[i].cso        = 0;
+        tx_desc_array[i].cmd        = (~E1000_TXD_CMD_DEXT & (E1000_TXD_CMD_RS | E1000_TXD_CMD_EOP));
+        tx_desc_array[i].status     = 0;
+        tx_desc_array[i].css        = 0;
+        tx_desc_array[i].special    = 0;
+    }
 
     /* TODO: [p5-task1] Set up the Tx descriptor base address and length */
+    uint64_t tx_base    = kva2pa((uint64_t)tx_desc_array);
+    e1000_write_reg(e1000, E1000_TDBAH, tx_base >> 32);
+    e1000_write_reg(e1000, E1000_TDBAL, tx_base & LOW32_MASK);
+    e1000_write_reg(e1000, E1000_TDLEN, TXDESCS * sizeof(struct e1000_tx_desc));
 
 	/* TODO: [p5-task1] Set up the HW Tx Head and Tail descriptor pointers */
+    e1000_write_reg(e1000, E1000_TDH, 0);
+    e1000_write_reg(e1000, E1000_TDT, 0);
 
     /* TODO: [p5-task1] Program the Transmit Control Register */
+    uint32_t tctl_ct    = (0x10 << 4) & E1000_TCTL_CT;
+    uint32_t tctl_cold  = (0x40 << 12) & E1000_TCTL_COLD;
+    e1000_write_reg(e1000, E1000_TCTL, E1000_TCTL_EN | E1000_TCTL_PSP | tctl_ct | tctl_cold);
 }
 
 /**
@@ -69,14 +89,34 @@ static void e1000_configure_tx(void)
 static void e1000_configure_rx(void)
 {
     /* TODO: [p5-task2] Set e1000 MAC Address to RAR[0] */
+    uint64_t mac_address    = 0;
+    for (int i = 0; i < 6; i++)
+        mac_address |= (enetaddr[i]) << (3 * i);
+    e1000_write_reg_array(e1000, E1000_RA, 0, mac_address & LOW32_MASK);                // RAL[0]: 0x5400 + 8*idx
+    e1000_write_reg_array(e1000, E1000_RA, 1, (mac_address >> 32) | E1000_RAH_AV);      // RAH[0]: 0x5404 + 8*idx
 
     /* TODO: [p5-task2] Initialize rx descriptors */
+    for (int i = 0; i < RXDESCS; i++){
+        rx_desc_array[i].addr       = kva2pa((uint64_t)rx_pkt_buffer[i]);
+        rx_desc_array[i].length     = 0;
+        rx_desc_array[i].csum       = 0;
+        rx_desc_array[i].status     = 0;
+        rx_desc_array[i].errors     = 0;
+        rx_desc_array[i].special    = 0;
+    }
 
     /* TODO: [p5-task2] Set up the Rx descriptor base address and length */
+    uint64_t rx_base    = kva2pa((uint64_t)rx_desc_array);
+    e1000_write_reg(e1000, E1000_RDBAL, rx_base & LOW32_MASK);
+    e1000_write_reg(e1000, E1000_RDBAH, rx_base >> 32);
+    e1000_write_reg(e1000, E1000_RDLEN, RXDESCS * sizeof(struct e1000_rx_desc));
 
     /* TODO: [p5-task2] Set up the HW Rx Head and Tail descriptor pointers */
+    e1000_write_reg(e1000, E1000_RDH, 0);
+    e1000_write_reg(e1000, E1000_RDT, RXDESCS - 1);
 
     /* TODO: [p5-task2] Program the Receive Control Register */
+    e1000_write_reg(e1000, E1000_RCTL, ~E1000_RCTL_BSEX & (E1000_RCTL_EN | E1000_RCTL_BAM | E1000_RCTL_SZ_2048));
 
     /* TODO: [p5-task3] Enable RXDMT0 Interrupt */
 }
@@ -105,8 +145,35 @@ void e1000_init(void)
 int e1000_transmit(void *txpacket, int length)
 {
     /* TODO: [p5-task1] Transmit one packet from txpacket */
+    local_flush_dcache();
+    uint32_t head       = e1000_read_reg(e1000, E1000_TDH);
+    uint32_t tail       = e1000_read_reg(e1000, E1000_TDT);
+    uint32_t next_tail  = (tail + 1) % TXDESCS;
 
-    return 0;
+    if (head == next_tail){              // no space :(
+        return 0;
+    }
+
+    // Step1: Content
+    memcpy((uint8_t *)tx_pkt_buffer[tail], (uint8_t *)txpacket, length);
+
+    // Step2: Descriptor
+    tx_desc_array[tail].length  = length;
+    tx_desc_array[tail].status  = 0;
+
+    // Step3: update NIC reg
+    e1000_write_reg(e1000, E1000_TDT, next_tail);
+    local_flush_dcache();
+
+    // Step3.1(task1): wait
+retry:
+    local_flush_dcache();
+    if (tx_desc_array[tail].status == 0) 
+        goto retry;
+    
+
+    // Step 4: finish
+    return length;
 }
 
 /**

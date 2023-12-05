@@ -128,7 +128,7 @@ extern void transfer_page_p2s(uint64_t phy_addr, uint64_t start_sector);
 extern void transfer_page_s2p(uint64_t phy_addr, uint64_t start_sector);
 extern swp_pg_t *query_swp_page(uint64_t va, pcb_t *pcb_ptr);
 extern void unmap(uint64_t va, uint64_t pgdir);
-//extern uint64_t map(uint64_t va, uint64_t kva, uint64_t pgdir);
+extern void map(uint64_t va, uint64_t kva, uint64_t pgdir, uint64_t attribute);
 
 // TODO [P4-task1] */
 void freePage(ptr_t baseAddr);
