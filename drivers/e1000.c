@@ -4,6 +4,7 @@
 #include <os/time.h>
 #include <assert.h>
 #include <pgtable.h>
+#include <printk.h>
 
 #define LOW32_MASK  0xffffffff
 

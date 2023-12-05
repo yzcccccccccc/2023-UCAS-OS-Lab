@@ -314,7 +314,7 @@ void sys_shmpagedt(void *addr)
 int sys_net_send(void *txpacket, int length)
 {
     uint64_t tmp_txpacket = malloc_secPage(length);
-    copy_ptr_to_secPage(txpacket, (void *)tmp_txpacket, length);
+    copy_ptr_to_secPage((void *)tmp_txpacket, txpacket, length);
     /* TODO: [p5-task1] call invoke_syscall to implement sys_net_send */
     return invoke_syscall(SYSCALL_NET_SEND, (long)tmp_txpacket, length, 0, 0, 0);
 }
