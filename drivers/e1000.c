@@ -82,6 +82,8 @@ static void e1000_configure_tx(void)
     uint32_t tctl_ct    = (0x10 << 4) & E1000_TCTL_CT;
     uint32_t tctl_cold  = (0x40 << 12) & E1000_TCTL_COLD;
     e1000_write_reg(e1000, E1000_TCTL, E1000_TCTL_EN | E1000_TCTL_PSP | tctl_ct | tctl_cold);
+
+    local_flush_dcache();
 }
 
 /**
@@ -92,7 +94,7 @@ static void e1000_configure_rx(void)
     /* TODO: [p5-task2] Set e1000 MAC Address to RAR[0] */
     uint64_t mac_address    = 0;
     for (int i = 0; i < 6; i++)
-        mac_address |= (enetaddr[i]) << (3 * i);
+        mac_address |= ((uint64_t)enetaddr[i] << (8 * i));
     e1000_write_reg_array(e1000, E1000_RA, 0, mac_address & LOW32_MASK);                // RAL[0]: 0x5400 + 8*idx
     e1000_write_reg_array(e1000, E1000_RA, 1, (mac_address >> 32) | E1000_RAH_AV);      // RAH[0]: 0x5404 + 8*idx
 
@@ -120,6 +122,8 @@ static void e1000_configure_rx(void)
     e1000_write_reg(e1000, E1000_RCTL, ~E1000_RCTL_BSEX & (E1000_RCTL_EN | E1000_RCTL_BAM | E1000_RCTL_SZ_2048));
 
     /* TODO: [p5-task3] Enable RXDMT0 Interrupt */
+
+    local_flush_dcache();
 }
 
 /**
@@ -185,6 +189,26 @@ retry:
 int e1000_poll(void *rxbuffer)
 {
     /* TODO: [p5-task2] Receive one packet and put it into rxbuffer */
+    local_flush_dcache();
+    uint32_t head       = e1000_read_reg(e1000, E1000_RDH);
+    uint32_t tail       = e1000_read_reg(e1000, E1000_RDT);
+    uint32_t next_tail  = (tail + 1) % RXDESCS;
 
-    return 0;
+    if (next_tail == head)              // empty
+        return 0;
+
+    // Step1: Length
+    uint32_t len = (uint32_t)rx_desc_array[next_tail].length;
+
+    // Step2: Content
+    copyout((uint8_t *)rx_pkt_buffer[next_tail], (uint8_t *)rxbuffer, len);
+
+    // Step3: Descriptor
+    rx_desc_array[next_tail].status = 0;
+
+    // Step4: Update NIC reg
+    e1000_write_reg(e1000, E1000_RDT, next_tail);
+    local_flush_dcache();
+
+    return len;
 }

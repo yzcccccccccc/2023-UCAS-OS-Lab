@@ -21,8 +21,18 @@ int do_net_recv(void *rxbuffer, int pkt_num, int *pkt_lens)
 {
     // TODO: [p5-task2] Receive one network packet via e1000 device
     // TODO: [p5-task3] Call do_block when there is no packet on the way
+    int rtv = 0;
+    for (int i = 0, len; i < pkt_num; i++){
+        retry:
+            len = e1000_poll(rxbuffer);
+            if (len == 0)
+                goto retry;
+        copyout((uint8_t *)(&len), (uint8_t *)(pkt_lens + i), sizeof(int));
+        rxbuffer += len;
+        rtv += len;
+    }
 
-    return 0;  // Bytes it has received
+    return rtv;  // Bytes it has received
 }
 
 void net_handle_irq(void)

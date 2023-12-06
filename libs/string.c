@@ -137,7 +137,7 @@ void copyin(uint8_t *ker_dst, uint8_t *usr_src, uint32_t len){
 }
 
 // copyout, usr_src is user virtual address
-void copyout(uint32_t *ker_src, uint8_t *usr_dst, uint32_t len){
+void copyout(uint8_t *ker_src, uint8_t *usr_dst, uint32_t len){
     int cpuid = get_current_cpu_id();
     uint64_t dst_uva = ROUNDDOWN(usr_dst, NORMAL_PAGE_SIZE);
     uint64_t dst_kva;
