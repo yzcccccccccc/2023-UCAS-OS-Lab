@@ -13,4 +13,8 @@ char *strncpy(char *dest, const char *src, int n);
 char *strcat(char *dest, const char *src);
 int strlen(const char *src);
 
+// [p4] safety copy
+void copyin(uint8_t *ker_dst, uint8_t *usr_src, uint32_t len);
+void copyout(uint32_t *ker_src, uint8_t *usr_dst, uint32_t len);
+
 #endif

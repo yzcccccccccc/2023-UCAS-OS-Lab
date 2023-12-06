@@ -156,7 +156,7 @@ int e1000_transmit(void *txpacket, int length)
     }
 
     // Step1: Content
-    memcpy((uint8_t *)tx_pkt_buffer[tail], (uint8_t *)txpacket, length);
+    copyin((uint8_t *)tx_pkt_buffer[tail], (uint8_t *)txpacket, length);
 
     // Step2: Descriptor
     tx_desc_array[tail].length  = length;

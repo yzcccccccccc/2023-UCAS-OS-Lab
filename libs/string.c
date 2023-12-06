@@ -1,4 +1,7 @@
 #include <os/string.h>
+#include <os/mm.h>
+#include <os/smp.h>
+#include <assert.h>
 
 void memcpy(uint8_t *dest, const uint8_t *src, uint32_t len)
 {
@@ -97,4 +100,70 @@ char *strcat(char *dest, const char *src)
     *dest = '\0';
 
     return tmp;
+}
+
+//-------------------------------[p4] Safety copy (credited to xv6)-------------------------------
+
+// copyin, usr_src is user virtual address
+void copyin(uint8_t *ker_dst, uint8_t *usr_src, uint32_t len){
+    int cpuid = get_current_cpu_id();
+    uint64_t src_uva = ROUNDDOWN(usr_src, NORMAL_PAGE_SIZE);               // alignment to 4KB
+    uint64_t src_kva;
+    uint64_t pgdir = current_running[cpuid]->pgdir;
+    for (int tmp_len = 0; len; len -= tmp_len){
+        src_kva = get_kva_v(src_uva, pgdir);
+        if (tmp_len == 0){
+            int pgrm_len = src_uva + NORMAL_PAGE_SIZE - (uint64_t)usr_src;
+            tmp_len = len > pgrm_len ? pgrm_len : len;
+        }
+        else
+            tmp_len = len > NORMAL_PAGE_SIZE ? NORMAL_PAGE_SIZE : len;
+
+        if (!src_kva){              // has been swapped out (kernel page fault)
+            swp_pg_t *swp_ptr = query_swp_page(src_uva, current_running[cpuid]);
+            assert(swp_ptr != NULL);
+            swap_in(swp_ptr);
+        }
+
+        // copy in!
+        for (int i = 0; i < tmp_len; i++){
+            *(ker_dst) = *(usr_src);
+            ker_dst++;
+            usr_src++;
+        }
+        
+        src_uva += tmp_len;
+    }
+}
+
+// copyout, usr_src is user virtual address
+void copyout(uint32_t *ker_src, uint8_t *usr_dst, uint32_t len){
+    int cpuid = get_current_cpu_id();
+    uint64_t dst_uva = ROUNDDOWN(usr_dst, NORMAL_PAGE_SIZE);
+    uint64_t dst_kva;
+    uint64_t pgdir = current_running[cpuid]->pgdir;
+    for (int tmp_len = 0; len; len -= tmp_len){
+        dst_kva = get_kva_v(dst_uva, pgdir);
+        if (tmp_len == 0){
+            int pgrm_len = dst_uva + NORMAL_PAGE_SIZE - (uint64_t)usr_dst;
+            tmp_len = len > pgrm_len ? pgrm_len : len;
+        }
+        else
+            tmp_len = len > NORMAL_PAGE_SIZE ? NORMAL_PAGE_SIZE : len;
+
+        if (!dst_kva){
+            swp_pg_t *swp_ptr = query_swp_page(dst_uva, current_running[cpuid]);
+            assert(swp_ptr != NULL);
+            swap_in(swp_ptr);
+        }
+
+        // copy out!
+        for (int i = 0; i < tmp_len; i++){
+            *(usr_dst) = *(ker_src);
+            usr_dst++;
+            ker_src++;
+        }
+
+        dst_uva += tmp_len;
+    }
 }
