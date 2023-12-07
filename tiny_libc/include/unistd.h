@@ -74,6 +74,7 @@ void sys_shmpagedt(void *addr);
 /* net send and recv */
 int sys_net_send(void *txpacket, int length);
 int sys_net_recv(void *rxbuffer, int pkt_num, int *pkt_lens);
+void sys_net_recv_stream(void *buffer, int *nbytes);
 /************************************************************/
 
 /* [p3-task4] taskset */

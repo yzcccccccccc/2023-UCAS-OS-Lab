@@ -48,4 +48,6 @@
 #define SYSCALL_THREAD_JOIN 29
 #define SYSCALL_MS  8
 
+#define SYSCALL_NET_RECV_STREAM 62
+
 #endif

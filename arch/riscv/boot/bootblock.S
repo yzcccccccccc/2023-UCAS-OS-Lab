@@ -16,6 +16,8 @@
 main:
 	// fence on all memory and I/O
 	fence
+	csrw 	CSR_SIE, zero				# mask interrupt in CSR_SIE
+
     // a0 is mhartid
 	bnez a0, secondary
 
