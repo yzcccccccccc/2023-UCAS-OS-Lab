@@ -274,8 +274,10 @@ void share_pgtable(uintptr_t dest_pgdir, uintptr_t src_pgdir)
     PTE *dest_pgtab = (PTE *)dest_pgdir;
     PTE *src_pgtab  = (PTE *)src_pgdir;
     int ITE_BOUND = NORMAL_PAGE_SIZE / sizeof(PTE);
-    for (int i = 0; i < ITE_BOUND; i++)
-        dest_pgtab[i] = src_pgtab[i];
+    for (int i = 0; i < ITE_BOUND; i++){
+        if (dest_pgtab[i] == 0)
+            dest_pgtab[i] = src_pgtab[i];
+    }
 }
 
 /* allocate physical page for `va`, mapping it into `pgdir`,

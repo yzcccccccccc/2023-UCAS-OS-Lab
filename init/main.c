@@ -49,6 +49,7 @@
 #include <assert.h>
 #include <type.h>
 #include <csr.h>
+#include <plic.h>
 
 extern void ret_from_exception();
 spin_lock_t unmap_sync_lock;
@@ -305,11 +306,12 @@ int main(void)
         // IOremap
         plic_addr = (uintptr_t)ioremap((uint64_t)plic_addr, 0x4000 * NORMAL_PAGE_SIZE);
         e1000 = (uint8_t *)ioremap((uint64_t)e1000, 8 * NORMAL_PAGE_SIZE);
+        share_pgtable(pcb[1].pgdir, pa2kva(PGDIR_PA));
         printk("> [INIT] IOremap initialization succeeded.\n");
 
         // TODO: [p5-task3] Init plic
-        // plic_init(plic_addr, nr_irqs);
-        // printk("> [INIT] PLIC initialized successfully. addr = 0x%lx, nr_irqs=0x%x\n", plic_addr, nr_irqs);
+        plic_init(plic_addr, nr_irqs);
+        printk("> [INIT] PLIC initialized successfully. addr = 0x%lx, nr_irqs=0x%x\n", plic_addr, nr_irqs);
 
         // Init network device
         e1000_init();

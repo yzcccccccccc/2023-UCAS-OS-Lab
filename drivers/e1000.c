@@ -122,6 +122,7 @@ static void e1000_configure_rx(void)
     e1000_write_reg(e1000, E1000_RCTL, ~E1000_RCTL_BSEX & (E1000_RCTL_EN | E1000_RCTL_BAM | E1000_RCTL_SZ_2048));
 
     /* TODO: [p5-task3] Enable RXDMT0 Interrupt */
+    e1000_write_reg(e1000, E1000_IMS, E1000_IMS_RXDMT0);
 
     local_flush_dcache();
 }
@@ -170,14 +171,7 @@ int e1000_transmit(void *txpacket, int length)
     e1000_write_reg(e1000, E1000_TDT, next_tail);
     local_flush_dcache();
 
-    // Step3.1(task1): wait
-retry:
-    local_flush_dcache();
-    if (tx_desc_array[tail].status == 0) 
-        goto retry;
-    
-
-    // Step 4: finish
+    // Step4: finish
     return length;
 }
 

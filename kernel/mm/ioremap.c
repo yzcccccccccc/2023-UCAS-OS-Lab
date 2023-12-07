@@ -27,6 +27,10 @@ void *ioremap(unsigned long phys_addr, unsigned long size)
         kva = pa2kva(phy_addr);
         map(va, kva, pgdir, attribute);
     }
+
+    // Step2: flush tlb
+    local_flush_tlb_all();
+    
     return (void *)rtv;
 }
 

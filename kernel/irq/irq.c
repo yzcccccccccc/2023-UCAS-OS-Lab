@@ -5,10 +5,12 @@
 #include <os/kernel.h>
 #include <os/smp.h>
 #include <os/mm.h>
+#include <os/net.h>
 #include <printk.h>
 #include <assert.h>
 #include <screen.h>
 #include <csr.h>
+#include <plic.h>
 
 handler_t irq_table[IRQC_COUNT];
 handler_t exc_table[EXCC_COUNT];
@@ -130,6 +132,17 @@ void handle_irq_ext(regs_context_t *regs, uint64_t stval, uint64_t scause)
 {
     // TODO: [p5-task3] external interrupt handler.
     // Note: plic_claim and plic_complete will be helpful ...
+    uint32_t id = plic_claim();
+    if (id != 0){
+        if (id == PLIC_E1000_PYNQ_IRQ || id == PLIC_E1000_QEMU_IRQ)
+            net_handle_irq();
+        else{
+            printk("Unknonw external interrupt (id: %d). :(\n", id);
+            assert(0);
+        }
+    }
+
+    plic_complete(id);
 }
 
 void init_exception()
@@ -141,13 +154,16 @@ void init_exception()
     }
     exc_table[EXCC_SYSCALL] = handle_syscall;
     exc_table[EXCC_INST_PAGE_FAULT] = exc_table[EXCC_LOAD_PAGE_FAULT] = exc_table[EXCC_STORE_PAGE_FAULT] = handle_page_fault;
+
     /* TODO: [p2-task4] initialize irq_table */
     /* NOTE: handle_int, handle_other, etc.*/
     for (int i = 0; i < IRQC_COUNT; i++){
         irq_table[i] = handle_other;
     }
     irq_table[IRQC_S_TIMER] = handle_irq_timer;
-    irq_table[IRQC_S_SOFT] = handle_ipi;
+    irq_table[IRQC_S_SOFT]  = handle_ipi;
+    irq_table[IRQC_S_EXT]   = handle_irq_ext;
+
     /* TODO: [p2-task3] set up the entrypoint of exceptions */
     setup_exception();
 }
