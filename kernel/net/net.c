@@ -161,10 +161,14 @@ int parse_stream_buffer(void *buffer){
 
     // MAGIC
     uint8_t magic = *(uint8_t *)(tran_buffer + OSI_TRAN_MAGIC_OFFSET);
+    if (magic != 0x45)
+        return 0;
     assert(magic == 0x45);
     
     // FLAG
     uint8_t flag = *(uint8_t *)(tran_buffer + OSI_TRAN_FLAG_OFFSET);
+    if (!(flag & OSI_TRAN_FLAG_DAT))
+        return 0;
     assert(flag & OSI_TRAN_FLAG_DAT);
 
     // LEN
@@ -213,7 +217,7 @@ int check_recv_list(){
     if (lst_ptr == &strm_used_lst)      // everyone has been acknowledged :)
         return 1;
     
-    int ack_seq = -1;
+    int ack_seq = -1, last = 0;
 
     // First Pkt (Sequence 0)
     lst_ptr = strm_used_lst.next;
@@ -229,34 +233,39 @@ int check_recv_list(){
         if (lst_ptr->next != &strm_used_lst){
             pkt_nxt_ptr = (tran_pkt_desc_t *)((void *)lst_ptr->next - TRANPKT_LIST_OFFSET);
             if (pkt_nxt_ptr->start_offset != pkt_ptr->end_offset){
-                if (ack_seq == -1)
+                if (ack_seq == -1 && ~pkt_ptr->ack)
                     ack_seq = pkt_ptr->end_offset;
                 do_signal_pkt_send(pkt_ptr->end_offset, OSI_TRAN_FLAG_RSD);
+            }
+        }
+        else{
+            if (ack_seq == -1 && ~pkt_ptr->ack){
+                ack_seq = pkt_ptr->end_offset;
+                last = 1;
             }
         }
         lst_ptr = lst_ptr->next;
     }
 
     // Ack the consecutive pkt begin with seq 0
-    if (ack_seq == -1){
-        lst_ptr = strm_used_lst.prev;
-        pkt_ptr = (tran_pkt_desc_t *)((void *)lst_ptr - TRANPKT_LIST_OFFSET);
-        ack_seq = pkt_ptr->end_offset;
-    }
-
-    // Mark the ack
-    lst_ptr = strm_used_lst.next;
-    while (lst_ptr != &strm_used_lst){
-        pkt_ptr = (tran_pkt_desc_t *)((void *)lst_ptr - TRANPKT_LIST_OFFSET);
-        if (pkt_ptr->start_offset < ack_seq)
-            pkt_ptr->ack = 1;
-        lst_ptr = lst_ptr->next;
-    }
-    
-    // Send Ack
-    if (ack_seq != 0){
-        do_signal_pkt_send(ack_seq, OSI_TRAN_FLAG_RSD);
-        do_signal_pkt_send(ack_seq, OSI_TRAN_FLAG_ACK);
+    if (ack_seq != -1){
+        // Mark the ack
+        lst_ptr = strm_used_lst.next;
+        while (lst_ptr != &strm_used_lst){
+            pkt_ptr = (tran_pkt_desc_t *)((void *)lst_ptr - TRANPKT_LIST_OFFSET);
+            if (pkt_ptr->start_offset < ack_seq)
+                pkt_ptr->ack = 1;
+            lst_ptr = lst_ptr->next;
+        }
+        
+        // Send Ack
+        if (ack_seq != 0){
+            do_signal_pkt_send(ack_seq, OSI_TRAN_FLAG_ACK);
+            printl("ACK: %d\n", ack_seq);
+            printk("[NET][ACK] ack: %d\n", ack_seq);
+            if (last)
+                do_signal_pkt_send(ack_seq, OSI_TRAN_FLAG_RSD);
+        }
     }
     return 0;
 }
@@ -299,4 +308,5 @@ work:
 
     // End
     copyout((uint8_t *)&recv_bytes, (uint8_t *)nbytes, sizeof(int));
+    printl("\n");
 }
