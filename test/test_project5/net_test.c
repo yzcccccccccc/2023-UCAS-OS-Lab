@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#define FILESIZE    65536
+#define FILESIZE    32768
 char file_content[FILESIZE];
 
 const int print_location = 8;
@@ -22,11 +22,20 @@ uint16_t fletcher16(uint8_t *data, int n){
 
 int main(){
     sys_move_cursor(0, print_location);
-    printf("[Net Test]: Start Test of sys_net_recv_stream....\n");
+    printf("[Net Test]: Start Test of sys_net_recv_stream test :P\n");
 
-    int filesz_bound = FILESIZE;
+    int filesz_bound = FILESIZE, filesz_target, filesz_recv = 0;
     sys_net_recv_stream(file_content, &filesz_bound);
+
+    filesz_target = *(int *)file_content;
+    filesz_recv += filesz_bound;
+
     sys_move_cursor(0, print_location);
-    printf("[Net Test]: Succesesfully acquired the file :)\n");
+    if (filesz_recv >= filesz_target){
+        uint32_t fletcher_res = fletcher16((uint8_t *)(file_content + 4), filesz_target);
+        printf("[Net Test]: Succesesfully acquire the file (%d bytes), fletcher16: %d :D    \n", filesz_target, fletcher_res);
+    }
+    else
+        printf("[Net Test]: Fail to acquire the file :(              \n");
     return 0;
 }

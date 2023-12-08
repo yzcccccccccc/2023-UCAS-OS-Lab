@@ -21,17 +21,24 @@ void do_net_recv_stream(void *buffer, int *nbytes);
 #define OSI_TRAN_SEQ_OFFSET     4
 #define OSI_TRAN_DATA_OFFSET    8
 
-#define OSI_TRAN_FLAG_DAT       0x80
-#define OSI_TRAN_FLAG_RSD       0x40
-#define OSI_TRAN_FLAG_ACK       0x20
+#define OSI_TRAN_FLAG_DAT       0x1
+#define OSI_TRAN_FLAG_RSD       0x2
+#define OSI_TRAN_FLAG_ACK       0x4
 
 #define STREAM_PKT_SIZE         2048      
 #define STREAM_PKT_NUM          64
 
+#define TRANPKT_LIST_OFFSET     8
 typedef struct tran_pkt_desc{
     int start_offset;
     int end_offset;
-    struct tran_pkt_desc *prev, *next;
+    list_node_t list;
+    int ack;
 }tran_pkt_desc_t;
+
+extern uint16_t _uint16_rev(uint16_t val);
+extern uint32_t _uint32_rev(uint32_t val);
+
+#define RETRY_LIMIT 2
 
 #endif  // !__INCLUDE_NET_H__

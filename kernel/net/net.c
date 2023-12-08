@@ -88,29 +88,71 @@ void net_handle_irq(void)
     assert(handle_mark != 0);
 }
 
+uint16_t _uint16_rev(uint16_t val){
+    return (val >> 8) | ((val & 0xff) << 8);
+}
+
+uint32_t _uint32_rev(uint32_t val){
+    uint32_t byte1, byte2, byte3, byte4;
+    byte1 = (val & 0xff000000) >> 24;
+    byte2 = (val & 0x00ff0000) >> 16;
+    byte3 = (val & 0x0000ff00) >> 8;
+    byte4 = val & 0x000000ff;
+    return byte1 | (byte2 << 8) | (byte3 << 16) | (byte4 << 24);
+}
 
 // [p5-task4]
 char stream_pkt_buffer[STREAM_PKT_SIZE];
-char send_buffer[TX_PKT_SIZE];                      // for RSD & ACK
+static uint32_t signal_pkt[256] = {
+    0xffffffff, 0x5500ffff, 0xf77db57d, 0x00450008, 0x0000d400, 0x11ff0040,
+    0xa8c073d8, 0x00e00101, 0xe914fb00, 0x0004e914, 0x0000,     0x005e0001,
+    0x2300fb00, 0x84b7f28b, 0x00450008, 0x0000d400, 0x11ff0040, 0xa8c073d8,
+    0x00e00101, 0xe914fb00, 0x0801e914, 0x0000};
 
-tran_pkt_desc_t stream_pkt_desc[STREAM_PKT_NUM];
-tran_pkt_desc_t stream_list_head;
-int pkt_cur, max_bytes;
+tran_pkt_desc_t strm_pkt_desc[STREAM_PKT_NUM];
+LIST_HEAD(strm_free_lst);
+LIST_HEAD(strm_used_lst);
+int max_bytes;
+
+void stream_lst_init(){
+    strm_free_lst.next = strm_free_lst.prev = &strm_free_lst;
+    strm_used_lst.next = strm_used_lst.prev = &strm_used_lst;
+    for (int i = 0; i < STREAM_PKT_NUM; i++){
+        strm_pkt_desc[i].ack = 0;
+        list_insert(&strm_free_lst, &strm_pkt_desc[i].list);
+    }
+}
 
 void stream_lst_insert(int start_offset, int end_offset){
-    stream_pkt_desc[pkt_cur].start_offset   = start_offset;
-    stream_pkt_desc[pkt_cur].end_offset     = end_offset;
+    // Get a free tran_pkt_desc
+    tran_pkt_desc_t *pkt_ptr;
 
-    tran_pkt_desc_t *pkt_ptr = &stream_list_head;
-    while (pkt_ptr->next != &stream_list_head && pkt_ptr->next->start_offset >= end_offset)
-        pkt_ptr = pkt_ptr->next;
+    // Find position
+    list_node_t *lst_ptr = &strm_used_lst;
+    while (lst_ptr->next != &strm_used_lst){
+        pkt_ptr = (tran_pkt_desc_t *)((void *)lst_ptr->next - TRANPKT_LIST_OFFSET);
+        if (pkt_ptr->start_offset == start_offset && pkt_ptr->end_offset == end_offset) // already exist
+            return;
+        if (pkt_ptr->start_offset >= end_offset)
+            break;
+        lst_ptr = lst_ptr->next;
+    }
     
-    stream_pkt_desc[pkt_cur].next = pkt_ptr->next;
-    stream_pkt_desc[pkt_cur].prev = pkt_ptr;
-    pkt_ptr->next->prev = &stream_pkt_desc[pkt_cur];
-    pkt_ptr->next = &stream_pkt_desc[pkt_cur];
+    // Get a free tran_pkt_desc
+    list_node_t *inst_lst_ptr = list_pop(&strm_free_lst);
+    assert(inst_lst_ptr != NULL);
 
-    pkt_cur++;
+    // Upload info
+    pkt_ptr = (tran_pkt_desc_t *)((void *)inst_lst_ptr - TRANPKT_LIST_OFFSET);
+    pkt_ptr->start_offset   = start_offset;
+    pkt_ptr->end_offset     = end_offset;
+
+    // Insert just after lst_ptr
+    inst_lst_ptr->next  = lst_ptr->next;
+    inst_lst_ptr->prev  = lst_ptr;
+    lst_ptr->next->prev = inst_lst_ptr;
+    lst_ptr->next       = inst_lst_ptr;
+
 }
 
 // return the length of the data part in the stream_pkt_buffer, copy the data to the buffer
@@ -126,12 +168,12 @@ int parse_stream_buffer(void *buffer){
     assert(flag & OSI_TRAN_FLAG_DAT);
 
     // LEN
-    uint16_t len = *(uint16_t *)(tran_buffer + OSI_TRAN_LEN_OFFSET);
+    uint16_t len = _uint16_rev(*(uint16_t *)(tran_buffer + OSI_TRAN_LEN_OFFSET));
 
     // SEQ
-    uint32_t seq = *(uint32_t *)(tran_buffer + OSI_TRAN_SEQ_OFFSET);
+    uint32_t seq = _uint32_rev(*(uint32_t *)(tran_buffer + OSI_TRAN_SEQ_OFFSET));
     uint32_t end = seq + len > max_bytes ? max_bytes : seq + len;
-    stream_lst_insert(seq, end);
+    stream_lst_insert(seq, seq + len);
 
     // DATA
     copyout((uint8_t *)(tran_buffer + OSI_TRAN_DATA_OFFSET), (uint8_t *)(buffer + seq), end - seq);
@@ -141,7 +183,9 @@ int parse_stream_buffer(void *buffer){
 }
 
 void do_signal_pkt_send(uint32_t seq, uint8_t flag){
-    void *tran_send_buffer = send_buffer + OSI_TRAN_BASE_OFFSET;
+    seq = _uint32_rev(seq);
+
+    void *tran_send_buffer = (void *)signal_pkt + OSI_TRAN_BASE_OFFSET;
     // MAGIC
     *(uint8_t *)(tran_send_buffer + OSI_TRAN_MAGIC_OFFSET)  = OSI_MAGIC_MARK;
     // FLAG
@@ -151,45 +195,108 @@ void do_signal_pkt_send(uint32_t seq, uint8_t flag){
     // SEQ
     *(uint32_t *)(tran_send_buffer + OSI_TRAN_SEQ_OFFSET)   = seq;
 
-    do_net_send(send_buffer, 8);
+    do_net_send((void *)signal_pkt, 64);
 }
 
 // 0: continue to recv pkts; 1: finish
 int check_recv_list(){
-    tran_pkt_desc_t *pkt_ptr = stream_list_head.next;
-    if (pkt_ptr == &stream_list_head)
+    tran_pkt_desc_t *pkt_ptr, *pkt_nxt_ptr;
+    list_node_t *lst_ptr = strm_used_lst.next;
+
+    // Check
+    while (lst_ptr != &strm_used_lst){
+        pkt_ptr = (tran_pkt_desc_t *)((void *)lst_ptr - TRANPKT_LIST_OFFSET);
+        if (!pkt_ptr->ack)
+            break;
+        lst_ptr = lst_ptr->next;
+    }
+    if (lst_ptr == &strm_used_lst)      // everyone has been acknowledged :)
         return 1;
     
-    uint32_t ack_seq = -1;
-    while (pkt_ptr != &stream_list_head){
-        if (pkt_ptr->next != &stream_list_head && pkt_ptr->next->start_offset != pkt_ptr->end_offset){
-            if (ack_seq == -1)  ack_seq = pkt_ptr->start_offset;
-            do_signal_pkt_send(pkt_ptr->next->start_offset, OSI_TRAN_FLAG_RSD);
-        }
-        pkt_ptr = pkt_ptr->next;
-    }
-    if (ack_seq == -1)
-        ack_seq = stream_list_head.prev->start_offset;
+    int ack_seq = -1;
 
-    do_signal_pkt_send(ack_seq, OSI_TRAN_FLAG_ACK);
+    // First Pkt (Sequence 0)
+    lst_ptr = strm_used_lst.next;
+    pkt_ptr = (tran_pkt_desc_t *)((void *)lst_ptr - TRANPKT_LIST_OFFSET);
+    if (pkt_ptr->start_offset != 0){
+        ack_seq = 0;
+        do_signal_pkt_send(0, OSI_TRAN_FLAG_RSD);
+    }
+
+    // Resend for the missing pkts
+    while (lst_ptr != &strm_used_lst){
+        pkt_ptr = (tran_pkt_desc_t *)((void *)lst_ptr - TRANPKT_LIST_OFFSET);
+        if (lst_ptr->next != &strm_used_lst){
+            pkt_nxt_ptr = (tran_pkt_desc_t *)((void *)lst_ptr->next - TRANPKT_LIST_OFFSET);
+            if (pkt_nxt_ptr->start_offset != pkt_ptr->end_offset){
+                if (ack_seq == -1)
+                    ack_seq = pkt_ptr->end_offset;
+                do_signal_pkt_send(pkt_ptr->end_offset, OSI_TRAN_FLAG_RSD);
+            }
+        }
+        lst_ptr = lst_ptr->next;
+    }
+
+    // Ack the consecutive pkt begin with seq 0
+    if (ack_seq == -1){
+        lst_ptr = strm_used_lst.prev;
+        pkt_ptr = (tran_pkt_desc_t *)((void *)lst_ptr - TRANPKT_LIST_OFFSET);
+        ack_seq = pkt_ptr->end_offset;
+    }
+
+    // Mark the ack
+    lst_ptr = strm_used_lst.next;
+    while (lst_ptr != &strm_used_lst){
+        pkt_ptr = (tran_pkt_desc_t *)((void *)lst_ptr - TRANPKT_LIST_OFFSET);
+        if (pkt_ptr->start_offset < ack_seq)
+            pkt_ptr->ack = 1;
+        lst_ptr = lst_ptr->next;
+    }
+    
+    // Send Ack
+    if (ack_seq != 0){
+        do_signal_pkt_send(ack_seq, OSI_TRAN_FLAG_RSD);
+        do_signal_pkt_send(ack_seq, OSI_TRAN_FLAG_ACK);
+    }
     return 0;
 }
 
 void do_net_recv_stream(void *buffer, int *nbytes){
-    int len, recv_bytes = 0;
+    int len, recv_bytes = 0, pkt_arrive;
+    int recv_retry = 0, eof_retry = 0;
     copyin((uint8_t *)(&max_bytes), (uint8_t *)nbytes, sizeof(int));
+    stream_lst_init();
 
 work:
-    // Init the list
-    pkt_cur = 0;
-    stream_list_head.next = stream_list_head.prev = &stream_list_head;
-
     // Recv
-    while ((len = e1000_poll(stream_pkt_buffer))) recv_bytes += parse_stream_buffer(buffer);
+    pkt_arrive = 0;
+    while ((len = e1000_poll(stream_pkt_buffer))){
+        pkt_arrive = 1;
+        recv_bytes += parse_stream_buffer(buffer);
+    }
 
-    // Check the recvs
-    if (!check_recv_list())
+    // Wait?
+    if (!pkt_arrive && recv_retry < RETRY_LIMIT){
+        recv_retry++;
+        do_sleep(2);
         goto work;
-    
+    }
+    else{
+        recv_retry = 0;
+        // Check the recvs
+        if (!check_recv_list()){
+            do_sleep(1);
+            goto work;
+        }
+        else{
+            if (eof_retry < RETRY_LIMIT){
+                eof_retry++;
+                do_sleep(1);
+                goto work;
+            }
+        }
+    }
+
+    // End
     copyout((uint8_t *)&recv_bytes, (uint8_t *)nbytes, sizeof(int));
 }
