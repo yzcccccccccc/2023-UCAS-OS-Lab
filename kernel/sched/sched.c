@@ -91,6 +91,7 @@ void do_scheduler(void)
     local_flush_icache_all();
 
     // TODO: [p2-task1] switch_to current_running
+    //printl("[Core %d] switch from %d to %d\n", cpu_id, prev->pid, current_running[cpu_id]->pid);
     switch_to(prev, current_running[cpu_id]);
 }
 

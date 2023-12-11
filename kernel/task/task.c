@@ -61,10 +61,6 @@ void init_pcb_stack(ptr_t kernel_stack, ptr_t user_stack, ptr_t entry_point, pcb
     user_sp = ROUNDDOWN(user_sp, 16);                                                   // 128 bits = 16 bytes
     pt_regs->regs[2]    = (reg_t)(pcb->user_sp - (user_stack - user_sp));               // sp
 
-    //uint64_t tmp_kva1 = get_kva_v(pt_regs->regs[11], pcb->pgdir);
-    //uint64_t tmp_kva2 = get_kva_v(pt_regs->regs[2], pcb->pgdir);
-
-
     /* TODO: [p2-task1] set sp to simulate just returning from switch_to
     * NOTE: you should prepare a stack, and push some values to
     * simulate a callee-saved context.
@@ -99,6 +95,7 @@ pid_t init_pcb_vname(char *name, int argc, char *argv[]){
     // [p4] allocate the pgdir
     if (pcb_new->status == TASK_UNUSED || pcb_new->thread_type == SUB_THREAD){       // first allocated or exit by a sub-thread
         pgdir = allocPage(1);                  // directly alloc, cause this is root page table, may be reused
+        clear_pgdir(pgdir);
         share_pgtable(pgdir, pa2kva(PGDIR_PA));
         pcb_new->pgdir = pgdir;
     }
@@ -115,7 +112,6 @@ pid_t init_pcb_vname(char *name, int argc, char *argv[]){
     // [p4] pid
     pid_n++;
     pcb_new->pid = pid_n;
-
     ptr_t entry_point = (load_task_img(name, pcb_new));
     if (entry_point){
         uint64_t kernel_stack_kva, user_stack_kva;

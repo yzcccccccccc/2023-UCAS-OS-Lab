@@ -316,7 +316,7 @@ int main(void)
 
         // Init network device
         e1000_init();
-        printk("> [INIT] E1000 device initialized successfully.\n");
+        printk("> [INIT] E1000 device initialized successfully. addr = 0x%lx\n", e1000);
 
         // Init system call table (0_0)
         init_syscall();

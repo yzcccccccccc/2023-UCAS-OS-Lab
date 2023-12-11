@@ -162,7 +162,7 @@ viewlog:
 	@tail -f $(QEMU_LOG_FILE)
 
 minicom:
-	sudo $(MINICOM) -D $(TTYUSB1)
+	sudo $(MINICOM) -D $(TTYUSB1) -X ~/OSLab-RISC-V/debug-log.txt
 
 .PHONY: all dirs clean floppy asm gdb run debug viewlog minicom run-net debug-net
 

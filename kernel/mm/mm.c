@@ -78,6 +78,7 @@ ptr_t allocPage_from_freePF(int type, pcb_t *pcb_ptr, uint64_t va, uint64_t attr
 
 retry:
     if (!list_empty(&free_pf)){                 // have free physical frame
+        printl("[Main Core] free_pf not empty \n");
         pf_list_ptr = list_pop(&free_pf);
         pf_ptr = (phy_pg_t *)((void *)pf_list_ptr - LIST_PGF_OFFSET);
         
@@ -101,6 +102,8 @@ retry:
     }
     else{                                       // swap out a physical frame
         pf_list_ptr = list_pop(&unpinned_used_pf);
+        printl("(In alloc_freePF) pf_lst_ptr: 0x%x\n", pf_list_ptr);
+        assert(pf_list_ptr != NULL);
         pf_ptr = (phy_pg_t *)((void *)pf_list_ptr - LIST_PGF_OFFSET);
         swap_out(pf_ptr);
         goto retry;
