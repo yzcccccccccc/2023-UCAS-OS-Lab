@@ -43,7 +43,8 @@ int main(){
     if (filesz_recv >= filesz_target){
         //show_content((uint8_t *)(file_content), 128);
         uint32_t fletcher_res = fletcher16((uint8_t *)(file_content + 4), filesz_target - 4);
-        printf("[Net Test]: Succesesfully acquire the file (%d bytes), fletcher16: %d :D    \n", filesz_target, fletcher_res);
+        printf("[Net Test]: Succesesfully acquire the file (%d bytes) :D          \n", filesz_target);
+        printf("[Net Test]: Fletcher16 Res: %d                               \n", fletcher_res);
     }
     else
         printf("[Net Test]: Fail to acquire the file (recv/target: %d/%d) :(                                        \n", filesz_recv, filesz_target);

@@ -123,7 +123,7 @@ void stream_lst_init(){
     }
 }
 
-void stream_lst_insert(int start_offset, int end_offset){
+int stream_lst_insert(int start_offset, int end_offset){
     // Get a free tran_pkt_desc
     tran_pkt_desc_t *pkt_ptr;
 
@@ -132,12 +132,14 @@ void stream_lst_insert(int start_offset, int end_offset){
     while (lst_ptr->next != &strm_used_lst){
         pkt_ptr = (tran_pkt_desc_t *)((void *)lst_ptr->next - TRANPKT_LIST_OFFSET);
         if (pkt_ptr->start_offset == start_offset && pkt_ptr->end_offset == end_offset) // already exist
-            return;
+            return 0;
         if (pkt_ptr->start_offset >= end_offset)
             break;
         lst_ptr = lst_ptr->next;
     }
     
+    printl("[NET][DAT] recv: (%d, %d)\n", start_offset, end_offset);
+
     // Get a free tran_pkt_desc
     list_node_t *inst_lst_ptr = list_pop(&strm_free_lst);
     assert(inst_lst_ptr != NULL);
@@ -153,6 +155,7 @@ void stream_lst_insert(int start_offset, int end_offset){
     lst_ptr->next->prev = inst_lst_ptr;
     lst_ptr->next       = inst_lst_ptr;
 
+    return 1;
 }
 
 // return the length of the data part in the stream_pkt_buffer, copy the data to the buffer
@@ -177,13 +180,15 @@ int parse_stream_buffer(void *buffer){
     // SEQ
     uint32_t seq = _uint32_rev(*(uint32_t *)(tran_buffer + OSI_TRAN_SEQ_OFFSET));
     uint32_t end = seq + len > max_bytes ? max_bytes : seq + len;
-    stream_lst_insert(seq, seq + len);
+    int suc = stream_lst_insert(seq, seq + len);
 
-    // DATA
-    copyout((uint8_t *)(tran_buffer + OSI_TRAN_DATA_OFFSET), (uint8_t *)(buffer + seq), end - seq);
-
-
-    return end - seq;
+    if (suc){
+        // DATA
+        copyout((uint8_t *)(tran_buffer + OSI_TRAN_DATA_OFFSET), (uint8_t *)(buffer + seq), end - seq);
+        return end - seq;
+    }
+    else
+        return 0;
 }
 
 void do_signal_pkt_send(uint32_t seq, uint8_t flag){
@@ -217,7 +222,7 @@ int check_recv_list(){
     if (lst_ptr == &strm_used_lst)      // everyone has been acknowledged :)
         return 1;
     
-    int ack_seq = -1, last = 0;
+    int ack_seq = -1, last = 0, bubble = 0;
 
     // First Pkt (Sequence 0)
     lst_ptr = strm_used_lst.next;
@@ -225,6 +230,7 @@ int check_recv_list(){
     if (pkt_ptr->start_offset != 0){
         ack_seq = 0;
         do_signal_pkt_send(0, OSI_TRAN_FLAG_RSD);
+        printl("[NET][RSD] rsd: %d\n", 0);
     }
 
     // Resend for the missing pkts
@@ -233,13 +239,15 @@ int check_recv_list(){
         if (lst_ptr->next != &strm_used_lst){
             pkt_nxt_ptr = (tran_pkt_desc_t *)((void *)lst_ptr->next - TRANPKT_LIST_OFFSET);
             if (pkt_nxt_ptr->start_offset != pkt_ptr->end_offset){
-                if (ack_seq == -1 && ~pkt_ptr->ack)
+                if (ack_seq == -1 && pkt_ptr->ack == 0 && bubble == 0)
                     ack_seq = pkt_ptr->end_offset;
+                bubble = 1;
+                printl("[NET][RSD] rsd: %d\n", pkt_ptr->end_offset);
                 do_signal_pkt_send(pkt_ptr->end_offset, OSI_TRAN_FLAG_RSD);
             }
         }
         else{
-            if (ack_seq == -1 && ~pkt_ptr->ack){
+            if (ack_seq == -1 && pkt_ptr->ack == 0 && bubble == 0){
                 ack_seq = pkt_ptr->end_offset;
                 last = 1;
             }
@@ -261,10 +269,11 @@ int check_recv_list(){
         // Send Ack
         if (ack_seq != 0){
             do_signal_pkt_send(ack_seq, OSI_TRAN_FLAG_ACK);
-            printl("ACK: %d\n", ack_seq);
-            printk("[NET][ACK] ack: %d\n", ack_seq);
-            if (last)
+            printl("[NET][ACK] ack: %d\n", ack_seq);
+            if (last){
+                printl("[NET][RSD] rsd(last): %d\n", ack_seq);
                 do_signal_pkt_send(ack_seq, OSI_TRAN_FLAG_RSD);
+            }
         }
     }
     return 0;
@@ -287,7 +296,7 @@ work:
     // Wait?
     if (!pkt_arrive && recv_retry < RETRY_LIMIT){
         recv_retry++;
-        do_sleep(2);
+        do_sleep(1);
         goto work;
     }
     else{
