@@ -219,9 +219,15 @@ int check_recv_list(){
             break;
         lst_ptr = lst_ptr->next;
     }
-    if (lst_ptr == &strm_used_lst)      // everyone has been acknowledged :)
+
+    // everyone has been acknowledged :)
+    if (lst_ptr == &strm_used_lst){
+        lst_ptr = lst_ptr->prev;
+        pkt_ptr = (tran_pkt_desc_t *)((void *)lst_ptr - TRANPKT_LIST_OFFSET);
+        printl("[NET][RSD] rsd(last): %d\n", pkt_ptr->end_offset);
+        do_signal_pkt_send(pkt_ptr->end_offset, OSI_TRAN_FLAG_RSD);
         return 1;
-    
+    }
     int ack_seq = -1, last = 0, bubble = 0;
 
     // First Pkt (Sequence 0)
