@@ -206,3 +206,17 @@ int e1000_poll(void *rxbuffer)
 
     return len;
 }
+
+int e1000_check_send(){
+    local_flush_dcache();
+    uint32_t head = e1000_read_reg(e1000, E1000_TDH);
+    uint32_t tail = e1000_read_reg(e1000, E1000_TDT);
+    return (head != (tail + 1)%TXDESCS) || (tx_desc_array[head].status & E1000_TXD_STAT_DD);
+}
+
+int e1000_check_recv(){
+    local_flush_dcache();
+    uint32_t head = e1000_read_reg(e1000, E1000_RDH);
+    uint32_t tail = e1000_read_reg(e1000, E1000_RDT);
+    return (head != (tail + 1)%RXDESCS) || (rx_desc_array[head].status & E1000_RXD_STAT_DD);
+}

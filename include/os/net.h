@@ -11,6 +11,9 @@ int do_net_recv(void *rxbuffer, int pkt_num, int *pkt_lens);
 int do_net_send(void *txpacket, int length);
 void do_net_recv_stream(void *buffer, int *nbytes);
 
+#define CHECK_INTERVAL  10
+void net_timer_checker();
+
 // Simplified OSI Transfer Layer
 #define WINDOW_SIZE             10000
 #define OSI_MAGIC_MARK          0x45

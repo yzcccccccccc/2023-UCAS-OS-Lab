@@ -10,6 +10,27 @@
 static LIST_HEAD(send_block_queue);
 static LIST_HEAD(recv_block_queue);
 
+void wake_up_send(){
+    list_node_t *list_ptr = list_pop(&send_block_queue);
+    //assert(list_ptr != NULL);
+
+    if (list_ptr != NULL)
+        do_unblock(list_ptr);
+
+    if (list_empty(&send_block_queue)){
+        e1000_write_reg(e1000, E1000_IMC, E1000_IMC_TXQE);
+        local_flush_dcache();
+    }
+}
+
+void wake_up_recv(){
+    list_node_t *list_ptr = list_pop(&recv_block_queue);
+    //assert(list_ptr != NULL);
+
+    if (list_ptr != NULL)
+        do_unblock(list_ptr);
+}
+
 int do_net_send(void *txpacket, int length)
 {
     // TODO: [p5-task1] Transmit one network packet via e1000 device
@@ -54,6 +75,23 @@ int do_net_recv(void *rxbuffer, int pkt_num, int *pkt_lens)
     return rtv;  // Bytes it has received
 }
 
+int timer_cnt = 0;
+void net_timer_checker(){
+    timer_cnt++;
+    if (timer_cnt < CHECK_INTERVAL)
+        return;
+
+    // Check Send
+    if (e1000_check_send())
+        wake_up_send();
+
+    // Check Recv
+    if (e1000_check_recv())
+        wake_up_recv();
+
+    timer_cnt = 0;
+}
+
 void net_handle_irq(void)
 {
     // TODO: [p5-task3] Handle interrupts from network device
@@ -65,25 +103,12 @@ void net_handle_irq(void)
     int handle_mark = 0;
     if (icr_val & E1000_ICR_TXQE){
         handle_mark = 1;
-
-        list_node_t *list_ptr = list_pop(&send_block_queue);
-        assert(list_ptr != NULL);
-
-        do_unblock(list_ptr);
-
-        if (list_empty(&send_block_queue)){
-            e1000_write_reg(e1000, E1000_IMC, E1000_IMC_TXQE);
-            local_flush_dcache();
-        }
+        wake_up_send();     
     }
     if (icr_val & E1000_ICR_RXDMT0){
         handle_mark = 1;
 
-        list_node_t *list_ptr = list_pop(&recv_block_queue);
-        //assert(list_ptr != NULL);
-
-        if (list_ptr != NULL)
-            do_unblock(list_ptr);
+        wake_up_recv();
     }
     assert(handle_mark != 0);
 }
@@ -101,7 +126,7 @@ uint32_t _uint32_rev(uint32_t val){
     return byte1 | (byte2 << 8) | (byte3 << 16) | (byte4 << 24);
 }
 
-// [p5-task4]
+//-----------------------------------------------[p5-task4]-----------------------------------------------
 char stream_pkt_buffer[STREAM_PKT_SIZE];
 static uint32_t signal_pkt[256] = {
     0xffffffff, 0x5500ffff, 0xf77db57d, 0x00450008, 0x0000d400, 0x11ff0040,
