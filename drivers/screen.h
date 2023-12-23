@@ -27,6 +27,10 @@
 #ifndef INCLUDE_CONSOLE_H_
 #define INCLUDE_CONSOLE_H_
 
+#define SCREEN_WIDTH    100
+#define SCREEN_HEIGHT   50
+#define SCREEN_LOC(x, y) ((y) * SCREEN_WIDTH + (x))
+
 /* configuring screen properties */
 void init_screen(void);
 

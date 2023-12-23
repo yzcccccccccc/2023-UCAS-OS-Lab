@@ -32,7 +32,7 @@
 #include <ctype.h>
 #include <stdrtv.h>
 
-#define SHELL_BEGIN 20
+#define SHELL_BEGIN 15
 #define SHELL_BUFF_LEN 30
 
 #define NAME_MAX_LEN 20
@@ -285,6 +285,7 @@ int main(void)
 {
     sys_move_cursor(0, SHELL_BEGIN);
     printf("------------------------------- COMMAND -------------------------------\n");
+    sys_mkfs(1);
     printf("> root@UCAS_OS: ");
 
     int ch;

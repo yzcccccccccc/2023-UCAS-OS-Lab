@@ -80,4 +80,11 @@ void sys_net_recv_stream(void *buffer, int *nbytes);
 /* [p3-task4] taskset */
 int sys_taskset(char *name, int mask, int pid);
 
+// [p6]
+void sys_mkfs(int force);
+int sys_fopen(char *name, int option);
+int sys_fclose(int fd);
+int sys_fread(int fd, char *buff, int length);
+int sys_fwrite(int fd, char *buff, int length);
+
 #endif

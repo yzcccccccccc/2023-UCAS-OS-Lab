@@ -42,6 +42,7 @@
 #include <os/sync.h>
 #include <os/smp.h>
 #include <os/ioremap.h>
+#include <os/fs.h>
 #include <sys/syscall.h>
 #include <screen.h>
 #include <e1000.h>
@@ -227,6 +228,8 @@ static void init_syscall(void)
     syscall[SYSCALL_NET_SEND]           = (long (*)())do_net_send;
     syscall[SYSCALL_NET_RECV]           = (long (*)())do_net_recv;
     syscall[SYSCALL_NET_RECV_STREAM]    = (long (*)())do_net_recv_stream;
+
+    syscall[SYSCALL_FS_MKFS]            = (long (*)())do_mkfs;
 }
 /************************************************************/
 

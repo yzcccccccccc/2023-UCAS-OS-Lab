@@ -327,3 +327,24 @@ void sys_net_recv_stream(void *buffer, int *nbytes){
     invoke_syscall(SYSCALL_NET_RECV_STREAM, (long)buffer, (long)nbytes, 0, 0, 0);
 }
 /************************************************************/
+
+// [p6]
+void sys_mkfs(int force){
+    invoke_syscall(SYSCALL_FS_MKFS, (long)force, 0, 0, 0, 0);
+}
+
+int sys_fopen(char *name, int option){
+    return invoke_syscall(SYSCALL_FS_FOPEN, (long)name, (long)option, 0, 0, 0);
+}
+
+int sys_fclose(int fd){
+    return invoke_syscall(SYSCALL_FS_FCLOSE, (long)fd, 0, 0, 0, 0);
+}
+
+int sys_fread(int fd, char *buff, int length){
+    return invoke_syscall(SYSCALL_FS_FREAD, (long)fd, (long)buff, (long)length, 0, 0);
+}
+
+int sys_fwrite(int fd, char *buff, int length){
+    return invoke_syscall(SYSCALL_FS_FWRITE, (long)fd, (long)buff, (long)length, 0, 0);
+}

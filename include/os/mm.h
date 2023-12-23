@@ -46,7 +46,7 @@
 #define ROUNDDOWN(a, n) (((uint64_t)(a)) & ~((n)-1))
 
 /* [p4] page-frame management */
-#define NUM_MAX_PHYPAGE     12
+#define NUM_MAX_PHYPAGE     256
 #define NUM_MAX_SWPPAGE     1024
 #define NUM_MAX_SHMPAGE     64
 #define LIST_PGF_OFFSET     16
