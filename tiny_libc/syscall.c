@@ -333,6 +333,10 @@ void sys_mkfs(int force){
     invoke_syscall(SYSCALL_FS_MKFS, (long)force, 0, 0, 0, 0);
 }
 
+void sys_statfs(){
+    invoke_syscall(SYSCALL_FS_STATFS, 0, 0, 0, 0, 0);
+}
+
 int sys_fopen(char *name, int option){
     return invoke_syscall(SYSCALL_FS_FOPEN, (long)name, (long)option, 0, 0, 0);
 }

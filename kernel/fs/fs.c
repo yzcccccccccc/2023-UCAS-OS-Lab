@@ -335,8 +335,7 @@ void do_mkfs(int force){
         printk("    FS Data Map offset: %d, Occupy: %d sectors (%d KB)\n", FS_DATAMAP_OFFSET, FS_DATAMAP_SECNUM, FS_DATAMAP_SECNUM * FS_SECTOR_SIZE / 1024);
         printk("    FS Inode offset: %d, Occupy: %d sectors (%d KB)\n", FS_INODE_OFFSET, FS_INODE_SECNUM, FS_INODE_SECNUM * FS_SECTOR_SIZE / 1024);
         printk("    FS Data Block offset: %d\n", FS_DATA_OFFSET);
-        printk("    FS Inode entry size: %d bytes\n", FS_INODE_SIZE);
-        printk("    FS Dir entry size: %d bytes\n", FS_DENTRY_SIZE);
+        printk("    FS Inode entry size: %d bytes, Dir entry size: %d bytes\n", FS_INODE_SIZE, FS_DENTRY_SIZE);
 
         void *buffer;
         int ITE_BOUND = FS_BLOCK_SIZE / sizeof(uint64_t);
@@ -357,6 +356,8 @@ void do_mkfs(int force){
             buffer += sizeof(uint64_t);
         }
         for (int id = 0; id < FS_DATAMAP_BLKNUM; id++){
+            screen_move_cursor_c(-SCREEN_WIDTH, -1);
+            printk("[FS] Setting data bitmap ...(%d/%d)\n", id + 1, FS_DATAMAP_BLKNUM);
             fs_write_datamap(id);
         }
 
@@ -397,9 +398,51 @@ void do_mkfs(int force){
         printk("[FS] Initialization finish!\n");
     }
     else {
-        printk("[FS] FileSystem already exists, exiting ...\n");
+        printk("[FS] File System already exists, exiting ...\n");
     }
     return;
 }
 
+void do_statfs(){
+    fs_read_superblock();
+    if (SuperBlock.magic == FS_SUPER_MAGIC){
+        printk("[FS] File System Status:\n");
+        printk("    MAGIC: 0x%x\n", SuperBlock.magic);
+        printk("    FS Start Sector: %d\n", SuperBlock.fs_start_sector);
+        printk("    FS Inode entry size: %d bytes, Dir entry size: %d bytes\n", SuperBlock.inode_size, SuperBlock.dentry_size);
 
+        // Calculate the use of inodes
+        printk("    Checking inode usage...\n");
+        int inomap_use = 0, inomap_total;
+        fs_read_inodemap();
+        for (int i = 0; i < FS_BLOCK_SIZE; i++){
+            for (int j = 0; j < 8; j++)
+                inomap_use += ((inode_bitmap_buf[i] & byte_bits[j]) != 0);
+        }
+        inomap_total = SuperBlock.inode_secNum * FS_SECTOR_SIZE * 8;
+        screen_move_cursor_c(-SCREEN_WIDTH, -1);
+        printk("    FS Inode Map offset: %d, Occupy: %d sectors\n", SuperBlock.ibitmap_start, SuperBlock.ibitmap_secNum);
+        printk("    FS Inode offset: %d, Use: %d/%d\n", SuperBlock.inode_start, inomap_use, inomap_total);
+
+        // Calculate the use of data block
+        printk("    Checking data block usage...\n");
+        int datablk_use = 0, datablk_total;
+        for (int id = 0; id < FS_DATAMAP_BLKNUM; id++){
+            screen_move_cursor_c(-SCREEN_WIDTH, -1);
+            printk("    Checking data block usage...(%d/%d)\n", id + 1, FS_DATAMAP_BLKNUM);
+            fs_read_datamap(id);
+            for (int i = 0; i < FS_BLOCK_SIZE; i++){
+                for (int j = 0; j < 8; j ++)
+                    datablk_use += ((data_bitmap_buf[i] & byte_bits[j]) != 0);
+            }
+        }
+        datablk_total = FS_DATAMAP_BLKNUM * FS_BLOCK_SIZE * 8;
+        screen_move_cursor_c(-SCREEN_WIDTH, -1);
+        printk("    FS Data Map offset: %d, Occupy: %d\n", SuperBlock.bbitmap_start, SuperBlock.bbitmap_secNum);
+        printk("    FS Data Block offset: %d, Use: %d/%d\n", SuperBlock.data_start, datablk_use, datablk_total);
+    }
+    else{
+        printk("[FS] Can't find file system! :(\n");
+    }
+    return;
+}

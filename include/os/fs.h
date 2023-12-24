@@ -147,4 +147,5 @@ extern int fs_rm_dentry();
 extern int fs_get_file_blk(int blk_index, inode_t *inode_ptr);
 
 extern void do_mkfs(int force);
+extern void do_statfs();
 #endif

@@ -230,6 +230,7 @@ static void init_syscall(void)
     syscall[SYSCALL_NET_RECV_STREAM]    = (long (*)())do_net_recv_stream;
 
     syscall[SYSCALL_FS_MKFS]            = (long (*)())do_mkfs;
+    syscall[SYSCALL_FS_STATFS]          = (long (*)())do_statfs;
 }
 /************************************************************/
 

@@ -163,6 +163,7 @@ pid_t init_pcb_vname(char *name, int argc, char *argv[]){
     }
     else {
         load_suc = 0;
+        pcb_new->pid = 0;
         pid_n--;
     }
     return pid_n * load_suc;

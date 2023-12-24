@@ -26,6 +26,7 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * * * * * */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
 #include <unistd.h>
 #include <string.h>
@@ -44,6 +45,7 @@ int buffer_cur = -1;
 
 char arg[ARG_MAX_NUM][ARG_MAX_NUM];
 char *argv[ARG_MAX_NUM];
+int argc;
 
 /* [p3] small tools :D */
 int my_getchar(){
@@ -65,12 +67,24 @@ void backspace(){
     sys_reflush();
 }
 
-void move_cur_left(){
-
-}
-
-void move_cur_right(){
-
+/* buffer parser */
+int parse_buffer(){
+    int len = strlen(buffer);
+    argc = 0;
+    for (int index = 0, cur = 0; index < len;){
+        while (isspace(buffer[index]) && index < len) index++;
+        if (index < len){
+            cur = 0;
+            while (!isspace(buffer[index]) && index < len){
+                arg[argc][cur] = buffer[index];
+                cur++;
+                index++;
+            }
+            arg[argc][cur] = '\0';
+            argc++;
+        }
+    }
+    return argc;
 }
 
 /* [p3] check the buffer to get the cmd */
@@ -90,53 +104,23 @@ void clear(){
 }
 
 void exec(){
-    char name[NAME_MAX_LEN];
-    int name_cur, cur, buffer_len;
-    name_cur = 0;
-    cur = 4;
-    buffer_len = strlen(buffer);
 
-    int need_wait = 1;
-    if (buffer[buffer_len - 1] == '&'){
-        need_wait = 0;
-        buffer_len -= 2;
+    // args
+    for (int i = 1; i < argc; i ++){
+        argv[i - 1] = arg[i];
     }
-    
-    // get the name !
-    while (buffer[cur] == ' ' && cur < buffer_len) cur++;
-    while (buffer[cur] != ' ' && cur < buffer_len){
-        name[name_cur] = buffer[cur];
-        name_cur++;
-        cur++;
-    }
-    name[name_cur] = '\0';
-
-    // get args !
-    int arg_num = 0, tmp_cur = 0;
-    cur = 4;
-    while (cur < buffer_len){
-        while (buffer[cur] == ' ' && cur < buffer_len) cur++;
-        tmp_cur = 0;
-        while (buffer[cur] != ' ' && cur < buffer_len){
-            arg[arg_num][tmp_cur] = buffer[cur];
-            cur++;
-            tmp_cur++;
-        }
-        arg[arg_num][tmp_cur] = '\0';
-        argv[arg_num] = (char *)(arg[arg_num]);
-        arg_num++;
-    }
+    int need_wait = strcmp(arg[argc - 1], "&");
 
     // syscall
-    pid_t new_pid = sys_exec(name, arg_num, argv);
+    pid_t new_pid = sys_exec(argv[0], argc - 1, argv);
     if (new_pid == 0){
         printf("[Info] Invalid process name. :(\n");
     }
     else{
-        printf("[Info] Successfully load %s, pid = %d. :)\n", name, new_pid);
+        printf("[Info] Successfully load %s, pid = %d. :)\n", argv[0], new_pid);
+        if (need_wait)
+            sys_waitpid(new_pid);
     }
-    if (need_wait)
-        sys_waitpid(new_pid);
 }
 
 void kill(){
@@ -166,35 +150,16 @@ void kill(){
 }
 
 void taskset(){
-    int buffer_len = strlen(buffer);
-    
     // check for '-p'
-    int form, need_wait = 1;
-    if (buffer[8] == '-' && buffer[9] == 'p')           // has arg '-p'
-        form = 1;
-    else
-        form = 0;
-    if (buffer[buffer_len - 1] == '&'){
-        need_wait = 0;
-        buffer_len--;
-    }
-    int cur = form ? 11 : 8;
+    int form = (strcmp(arg[1], "-p") == 0);
+    int need_wait = strcmp(arg[argc - 1], "&");
 
     // get the mask
-    int mask = 0;
-    while (buffer[cur] != ' ' && cur < buffer_len){
-        mask = mask*10 + buffer[cur] - '0';
-        cur++;
-    }
+    int mask = form ? atoi(arg[2]) : atoi(arg[1]);
 
     // get the name or pid
-    cur++;
     if (form == 1){     // pid
-        int pid = 0;
-        while (buffer[cur] != ' ' && cur < buffer_len){
-            pid = pid * 10 + buffer[cur] - '0';
-            cur++;
-        }
+        int pid = atoi(arg[3]);
         int rtval = sys_taskset(0, mask, pid);
         if (rtval)
             printf("[Info] bind pid = %d with mask 0x%x\n", pid, mask);
@@ -203,17 +168,9 @@ void taskset(){
         }
     }
     else{
-        char name[NAME_MAX_LEN];
-        int name_cur = 0;
-        while (buffer[cur] != ' ' && cur < buffer_len){
-            name[name_cur] = buffer[cur];
-            cur++;
-            name_cur++;
-        }
-        name[name_cur] = '\0';
-        int new_pid = sys_taskset(name, mask, 0);
+        int new_pid = sys_taskset(arg[2], mask, 0);
         if (new_pid){
-            printf("[Info] start %s with mask 0x%x\n", name, mask);
+            printf("[Info] start %s with mask 0x%x\n", arg[2], mask);
             if (need_wait)
                 sys_waitpid(new_pid);
         }
@@ -223,34 +180,48 @@ void taskset(){
     }
 }
 
+void mkfs(){
+    int force = (strcmp(arg[1], "-f") == 0);
+    sys_mkfs(force);
+}
+
+void statfs(){
+    sys_statfs();
+}
+
 int check_cmd(){
     int cmd_found = 0;
-    if (!strcmp(buffer, "ps")){
+    parse_buffer();
+    if (!strcmp(arg[0], "ps")){
         ps();
         cmd_found = 1;
     }
-    if (!strcmp(buffer, "ms")){
+    if (!strcmp(arg[0], "ms")){
         ms();
         cmd_found = 1;
     }
-    if (!strcmp(buffer, "clear")){
+    if (!strcmp(arg[0], "clear")){
         clear();
         cmd_found = 1;
     }
-    char tmp[9];
-    for (int i = 0; i < 4; i++) tmp[i] = buffer[i];
-    if (!strcmp(tmp, "exec")){
+    if (!strcmp(arg[0], "exec")){
         exec();
         cmd_found = 1;
     }
-    if (!strcmp(tmp, "kill")){
+    if (!strcmp(arg[0], "kill")){
         kill();
         cmd_found = 1;
     }
-
-    for (int i = 4; i < 7; i++) tmp[i] = buffer[i];
-    if (!strcmp(tmp, "taskset")){
+    if (!strcmp(arg[0], "taskset")){
         taskset();
+        cmd_found = 1;
+    }
+    if (!strcmp(arg[0], "mkfs")){
+        mkfs();
+        cmd_found = 1;
+    }
+    if (!strcmp(arg[0], "statfs")){
+        statfs();
         cmd_found = 1;
     }
     return cmd_found;
