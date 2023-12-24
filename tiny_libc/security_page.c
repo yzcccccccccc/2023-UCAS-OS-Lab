@@ -2,6 +2,7 @@
 #include <string.h>
 #include <syscall.h>
 #include <unistd.h>
+#include <stddef.h>
 
 uint64_t secPage_ptr = SECURITY_BASE;
 int secPage_mlock_handle = -1;
@@ -21,17 +22,26 @@ uint64_t malloc_secPage(int size){
 
 // [p4-task3]
 uint64_t copy_argv_to_secPage(char **argv, int argc){
+    if (argv == NULL)
+        return (uint64_t)NULL;
     char **rt_argv = (char **)malloc_secPage(argc * sizeof(uint64_t));
     for (int i = 0, len; i < argc; i++){
-        len = strlen(argv[i]) + 1;
-        rt_argv[i] = (char *)malloc_secPage(len);
-        strcpy(rt_argv[i], argv[i]);
+        if (argv[i] == NULL){
+            rt_argv[i] = NULL;
+        }
+        else{
+            len = strlen(argv[i]) + 1;
+            rt_argv[i] = (char *)malloc_secPage(len);
+            strcpy(rt_argv[i], argv[i]);
+        }
     }
     return (uint64_t)rt_argv;
 }
 
 // [p4-task3]
 uint64_t copy_str_to_secPage(char *str){
+    if (str == NULL)
+        return (uint64_t)NULL;
     int len = strlen(str) + 1;
     char *rt_str = (char *)malloc_secPage(len);
     strcpy(rt_str, str);

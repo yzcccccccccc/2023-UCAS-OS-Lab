@@ -234,6 +234,8 @@ static void init_syscall(void)
     syscall[SYSCALL_FS_STATFS]          = (long (*)())do_statfs;
     syscall[SYSCALL_FS_CD]              = (long (*)())do_cd;
     syscall[SYSCALL_FS_LS]              = (long (*)())do_ls;
+    syscall[SYSCALL_FS_MKDIR]           = (long (*)())do_mkdir;
+    syscall[SYSCALL_FS_PWD]             = (long (*)())do_pwd;
 }
 /************************************************************/
 

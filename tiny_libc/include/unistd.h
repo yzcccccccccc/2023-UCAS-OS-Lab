@@ -85,9 +85,11 @@ void sys_mkfs(int force);
 void sys_statfs();
 int sys_cd(char *path);
 int sys_ls(int mode, char *path);
+int sys_mkdir(char *path);
 int sys_fopen(char *name, int option);
 int sys_fclose(int fd);
 int sys_fread(int fd, char *buff, int length);
 int sys_fwrite(int fd, char *buff, int length);
+void sys_pwd();
 
 #endif

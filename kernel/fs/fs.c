@@ -128,7 +128,7 @@ int alloc_datablk(){
                     if ((data_bitmap_buf[i] & byte_bits[bit_cur]) == 0){
                         data_bitmap_buf[i] |= byte_bits[bit_cur];
                         fs_write_datamap(id);
-                        return (id * 4096 * 8 + i * 8 + bit_cur) + FS_DATA_OFFSET;
+                        return (id * 4096 * 8 + i * 8 + bit_cur) * 8 + FS_DATA_OFFSET;
                     }
                 }
             }
@@ -136,7 +136,6 @@ int alloc_datablk(){
     }
     return -1;
 }
-
 
 // [p6] adding a data block for cur_ino
 int fs_addBlk_ino(int cur_ino){
@@ -244,13 +243,47 @@ int fs_addBlk_ptr(inode_t *inode_ptr){
 }
 
 // [p6] adding a file
-int fs_addFile(int cur_ino, inode_type_t type, file_access_t access){
-    return 0;
+// allocate 4KB data-blk for dir during fs_addFile(), while File doesn't have that. 
+int fs_addFile(inode_t *cur_inode, inode_type_t type, file_access_t access, char *name){
+    int ino = alloc_inode();
+    if (ino == -1)  return -1;      // Fail, ino insufficient. :(
+
+    inode_t tmp_inode;
+    fs_read_inode(&tmp_inode, ino);
+
+    // basic info
+    tmp_inode.ino = ino;
+    tmp_inode.create_time = tmp_inode.modify_time = get_timer();
+    tmp_inode.pino = cur_inode->ino;
+    tmp_inode.type = type;
+    tmp_inode.access = access;
+    tmp_inode.file_size = 0;
+    tmp_inode.link_cnt = 0;
+
+    // hard-link
+    if (type == I_DIR){
+        fs_addBlk_ptr(&tmp_inode);
+        tmp_inode.file_size = FS_BLOCK_SIZE;
+
+        fs_mk_dentry(&tmp_inode, D_DIR, ".", ino);
+        fs_mk_dentry(&tmp_inode, D_DIR, "..", cur_inode->ino);
+        tmp_inode.link_cnt = 2;
+
+        cur_inode->link_cnt++;
+        fs_write_inode(cur_inode, cur_inode->ino);
+    }
+
+    // name
+    strcpy(tmp_inode.name, name);
+
+    fs_write_inode(&tmp_inode, ino);
+    return ino;
 }
 
 // [p6] insert a dir entry
 int fs_mk_dentry(inode_t *inode_ptr, dentry_type_t dtype, char *name, int target_ino){
     char tmp_blk[FS_BLOCK_SIZE];
+    assert(inode_ptr->type == I_DIR);
     for (int index = 0;;index++){
         int sec_offset = fs_get_file_blk(index, inode_ptr);
         if (sec_offset == 0)    break;
@@ -474,6 +507,7 @@ void do_statfs(){
 }
 
 char dir[FS_PATH_DEPTH][FS_NAME_LEN];
+int dir_dep;
 /* [p6] look up*/
 int fs_dentry_lookup(char *name, int cur_ino, dentry_type_t dtype){
     inode_t tmp_inode;
@@ -525,7 +559,8 @@ int path_parser(char *path){
     return dep;
 }
 
-int walk_path(char *path){
+// strip_last: for mkdir
+int walk_path(char *path, int strip_last){
     int cpuid = get_current_cpu_id();
     int dep = path_parser(path);
     int cur_ino, i_start = 0;
@@ -535,7 +570,9 @@ int walk_path(char *path){
     }
     else
         cur_ino = current_running[cpuid]->pwd;        // relative
-
+    
+    dir_dep = dep;
+    dep -= strip_last;
     for (int i = i_start; i < dep; i++){
         cur_ino = fs_dentry_lookup(dir[i], cur_ino, D_DIR);
         if (cur_ino == -1){
@@ -548,7 +585,7 @@ int walk_path(char *path){
 
 int do_cd(char *path){
     int cpuid = get_current_cpu_id();
-    int cur_ino = walk_path(path);
+    int cur_ino = walk_path(path, 0);
     if (cur_ino != -1)
         current_running[cpuid]->pwd = cur_ino;
     return cur_ino;
@@ -557,7 +594,7 @@ int do_cd(char *path){
 // [p6] ls (mode: -a(0b01), -l(0b10), -a & -l(0b11))
 int do_ls(int mode, char *path){
     int cpuid = get_current_cpu_id();
-    int cur_ino = (path == NULL) ? current_running[cpuid]->pwd : walk_path(path);
+    int cur_ino = (path == NULL) ? current_running[cpuid]->pwd : walk_path(path, 0);
 
     if (cur_ino != -1){
         inode_t tmp_inode;
@@ -582,4 +619,69 @@ int do_ls(int mode, char *path){
     else{
         return 0;
     }
+}
+
+// [p6] mkdir
+int do_mkdir(char *path){
+    if (path == NULL){
+        printk("[FS] Error: missing operand.\n");
+        return 0;
+    }
+
+    int cur_ino = walk_path(path, 1);
+    inode_t tmp_inode;
+    fs_read_inode(&tmp_inode, cur_ino);
+    dentry_t tmp_dentry;
+    tmp_dentry.dtype = D_DIR;
+    strcpy(tmp_dentry.name, dir[dir_dep - 1]);
+
+    // check existence
+    if (walkthrough_index(0, (int *)tmp_inode.direct, DIRECT_NUM, 0, 0, FS_WALK_QUERY, &tmp_dentry) != -1){
+        printk("[FS] Error: dir %s already exists.\n", dir[dir_dep - 1]);
+        return 0;
+    }
+    if (walkthrough_index(1, (int *)tmp_inode.indirect1, INDIRECT1_NUM, 0, 0, FS_WALK_QUERY, &tmp_dentry) != -1){
+        printk("[FS] Error: dir %s already exists.\n", dir[dir_dep - 1]);
+        return 0;
+    }
+    if (walkthrough_index(2, (int *)tmp_inode.indirect2, INDIRECT2_NUM, 0, 0, FS_WALK_QUERY, &tmp_dentry) != -1){
+        printk("[FS] Error: dir %s already exists.\n", dir[dir_dep - 1]);
+        return 0;
+    }
+    if (walkthrough_index(3, (int *)tmp_inode.indirect3, INDIRECT3_NUM, 0, 0, FS_WALK_QUERY, &tmp_dentry) != -1){
+        printk("[FS] Error: dir %s already exists.\n", dir[dir_dep - 1]);
+        return 0;
+    }
+
+    // insert
+    int ino = fs_addFile(&tmp_inode, I_DIR, O_RW, dir[dir_dep - 1]);
+    if (ino == -1){
+        printk("[FS] Error: insufficient inodes.\n");
+        return 0;
+    }
+    else{
+        fs_mk_dentry(&tmp_inode, D_DIR, dir[dir_dep - 1], ino);
+        tmp_inode.modify_time = get_timer();
+        fs_write_inode(&tmp_inode, tmp_inode.ino);
+    }
+    return 1;
+}
+
+void print_pwd(int cur_ino){
+    if (cur_ino == 0)
+        return;
+    else{
+        inode_t tmp_inode;
+        fs_read_inode(&tmp_inode, cur_ino);
+        print_pwd(tmp_inode.pino);
+        printk("/%s", tmp_inode.name);
+    }
+    return;
+}
+
+void do_pwd(){
+    int cpuid = get_current_cpu_id();
+    print_pwd(current_running[cpuid]->pwd);
+    printk("\n");
+    return;
 }

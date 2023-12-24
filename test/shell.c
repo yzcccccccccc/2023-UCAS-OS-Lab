@@ -201,6 +201,10 @@ void ls(){
             mode |= 0b10;
             continue;
         }
+        if (!strcmp(arg[i], "-al") || !strcmp(arg[i], "-la")){
+            mode |= 0b11;
+            continue;
+        }
         path = arg[i];
     }
     sys_ls(mode, path);
@@ -208,6 +212,19 @@ void ls(){
 
 void statfs(){
     sys_statfs();
+}
+
+void mkdir(){
+    if (argc < 2){
+        printf("[FS] Error: missing operend.\n");
+    }
+    else {
+        sys_mkdir(arg[1]);
+    }
+}
+
+void pwd(){
+    sys_pwd();
 }
 
 int check_cmd(){
@@ -251,6 +268,14 @@ int check_cmd(){
     }
     if (!strcmp(arg[0], "ls")){
         ls();
+        return cmd_found = 1;
+    }
+    if (!strcmp(arg[0], "mkdir")){
+        mkdir();
+        return cmd_found = 1;
+    }
+    if (!strcmp(arg[0], "pwd")){
+        pwd();
         return cmd_found = 1;
     }
     return cmd_found;

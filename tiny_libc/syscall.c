@@ -347,6 +347,11 @@ int sys_ls(int mode, char *path){
     return invoke_syscall(SYSCALL_FS_LS, (long)mode, (long)path, 0, 0, 0);
 }
 
+int sys_mkdir(char *path){
+    path = (char *)copy_str_to_secPage(path);
+    return invoke_syscall(SYSCALL_FS_MKDIR, (long)path, 0, 0, 0, 0);
+}
+
 int sys_fopen(char *name, int option){
     return invoke_syscall(SYSCALL_FS_FOPEN, (long)name, (long)option, 0, 0, 0);
 }
@@ -361,4 +366,8 @@ int sys_fread(int fd, char *buff, int length){
 
 int sys_fwrite(int fd, char *buff, int length){
     return invoke_syscall(SYSCALL_FS_FWRITE, (long)fd, (long)buff, (long)length, 0, 0);
+}
+
+void sys_pwd(){
+    invoke_syscall(SYSCALL_FS_PWD, 0, 0, 0, 0, 0);
 }

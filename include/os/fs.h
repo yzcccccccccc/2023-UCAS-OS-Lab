@@ -66,9 +66,9 @@ typedef enum dentry_type{
 }dentry_type_t;
 
 typedef enum file_access{
-    O_RW,
     O_RO,
     O_WO,
+    O_RW,
 }file_access_t;
 
 //---------------------- Super Block ----------------------
@@ -143,7 +143,6 @@ extern void fs_clearBlk(int sec_offset);
 extern void fs_clearSec(int sec_offset);
 extern int fs_addBlk_ino(int cur_ino);
 extern int fs_addBlk_ptr(inode_t *inode_ptr);
-extern int fs_addFile(int cur_ino, inode_type_t type, file_access_t access);
 extern int fs_mk_dentry(inode_t *inode_ptr, dentry_type_t dtype, char *name, int target_ino);
 extern int fs_rm_dentry();
 extern int fs_get_file_blk(int blk_index, inode_t *inode_ptr);
@@ -152,4 +151,6 @@ extern void do_mkfs(int force);
 extern void do_statfs();
 extern int do_cd(char *path);
 extern int do_ls(int mode, char *path);
+extern int do_mkdir(char *path);
+extern void do_pwd();
 #endif
