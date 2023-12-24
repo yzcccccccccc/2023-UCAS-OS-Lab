@@ -83,6 +83,8 @@ int sys_taskset(char *name, int mask, int pid);
 // [p6]
 void sys_mkfs(int force);
 void sys_statfs();
+int sys_cd(char *path);
+int sys_ls(int mode, char *path);
 int sys_fopen(char *name, int option);
 int sys_fclose(int fd);
 int sys_fread(int fd, char *buff, int length);

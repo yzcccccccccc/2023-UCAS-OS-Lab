@@ -7,6 +7,8 @@
 #include <os/string.h>
 #include <os/smp.h>
 #include <os/time.h>
+#include <os/sched.h>
+#include <assert.h>
 #include <stdrtv.h>
 #include <printk.h>
 #include <pgtable.h>
@@ -143,28 +145,52 @@ int fs_addBlk_ino(int cur_ino){
     return fs_addBlk_ptr(&tmp_inode);
 }
 
-// [p6] walk!
+// [p6] walk! add a block (future: delete blocks, look up blocks)
 // target_lev: 0~3, index_list: array of sector id, lev0_num: num of items in level0
 // cur_lev: current level, par_sec: parent sector id
-int walkthrough_index(int target_lev, int *index_list, int lev0_num, int cur_lev, int par_sec){
+#define FS_WALK_ADD 0
+#define FS_WALK_DEL 1
+#define FS_WALK_QUERY 2
+int walkthrough_index(int target_lev, int *index_list, int lev0_num, int cur_lev, int par_sec, int mode,
+                        dentry_t *target_dentry){
     int ITE_BOUND = cur_lev == 0 ? lev0_num : FS_BLOCK_SIZE / sizeof(int), rtv = -1;
     if (cur_lev == target_lev){
-        for (int i = 0, data_sec; i < ITE_BOUND; i++){
-            if (index_list[i] == 0){
-                data_sec = alloc_datablk();
-                index_list[i] = data_sec;
-                fs_clearBlk(data_sec);
-                if (cur_lev != 0)
-                    fs_write_block(par_sec, index_list);
-                rtv = data_sec;
-                break;
+        if (mode == FS_WALK_ADD){
+            for (int i = 0, data_sec; i < ITE_BOUND; i++){
+                if (index_list[i] == 0){
+                    data_sec = alloc_datablk();
+                    index_list[i] = data_sec;
+                    fs_clearBlk(data_sec);
+                    if (cur_lev != 0)
+                        fs_write_block(par_sec, index_list);
+                    rtv = data_sec;
+                    break;
+                }
+            }
+        }
+        if (mode == FS_WALK_DEL){
+            // to be continued
+        }
+        if (mode == FS_WALK_QUERY){
+            char wk_blk[FS_BLOCK_SIZE];
+            dentry_t *dentry_ptr;
+            for (int i = 0; i < ITE_BOUND; i++){
+                if (index_list[i] != 0){
+                    fs_read_block(index_list[i], wk_blk);
+                    dentry_ptr = (dentry_t *)wk_blk;
+                    for (int j = 0; j < FS_BLOCK_SIZE / FS_DENTRY_SIZE; j++){
+                        if (dentry_ptr[j].dtype == target_dentry->dtype && !strcmp(dentry_ptr[j].name, target_dentry->name)){
+                            return rtv = dentry_ptr[j].ino;
+                        }
+                    }
+                }
             }
         }
     }
     else {
         char wk_blk[FS_BLOCK_SIZE];
         for (int i = 0, data_sec; i < ITE_BOUND; i++){
-            if (index_list[i] == 0){
+            if (index_list[i] == 0 && mode == FS_WALK_ADD){
                 data_sec = alloc_datablk();
                 index_list[i] = data_sec;
                 fs_clearBlk(data_sec);
@@ -173,7 +199,7 @@ int walkthrough_index(int target_lev, int *index_list, int lev0_num, int cur_lev
             }
             if (index_list[i] != 0){
                 fs_read_block(index_list[i], wk_blk);
-                rtv = walkthrough_index(target_lev, (int *)wk_blk, lev0_num, cur_lev + 1, index_list[i]);
+                rtv = walkthrough_index(target_lev, (int *)wk_blk, lev0_num, cur_lev + 1, index_list[i], mode, target_dentry);
             }
         }
     }
@@ -185,7 +211,7 @@ int fs_addBlk_ptr(inode_t *inode_ptr){
     int lev0_num, rtv = -1;
     // Direct
     lev0_num = DIRECT_NUM;
-    rtv = walkthrough_index(0, (int *)inode_ptr->direct, lev0_num, 0, 0);
+    rtv = walkthrough_index(0, (int *)inode_ptr->direct, lev0_num, 0, 0, FS_WALK_ADD, NULL);
     if (rtv != -1){
         fs_write_inode(inode_ptr, inode_ptr->ino);
         return rtv;
@@ -193,7 +219,7 @@ int fs_addBlk_ptr(inode_t *inode_ptr){
 
     // Indirect1
     lev0_num = INDIRECT1_NUM;
-    rtv = walkthrough_index(1, (int *)inode_ptr->indirect1, lev0_num, 0, 0);
+    rtv = walkthrough_index(1, (int *)inode_ptr->indirect1, lev0_num, 0, 0, FS_WALK_ADD, NULL);
     if (rtv != -1){
         fs_write_inode(inode_ptr, inode_ptr->ino);
         return rtv;
@@ -201,7 +227,7 @@ int fs_addBlk_ptr(inode_t *inode_ptr){
 
     // Indirect2
     lev0_num = INDIRECT2_NUM;
-    rtv = walkthrough_index(2, (int *)inode_ptr->indirect2, lev0_num, 0, 0);
+    rtv = walkthrough_index(2, (int *)inode_ptr->indirect2, lev0_num, 0, 0, FS_WALK_ADD, NULL);
    if (rtv != -1){
         fs_write_inode(inode_ptr, inode_ptr->ino);
         return rtv;
@@ -209,7 +235,7 @@ int fs_addBlk_ptr(inode_t *inode_ptr){
 
     // Indirect3
     lev0_num = INDIRECT3_NUM;
-    rtv = walkthrough_index(3, (int *)inode_ptr->indirect3, lev0_num, 0, 0);
+    rtv = walkthrough_index(3, (int *)inode_ptr->indirect3, lev0_num, 0, 0, FS_WALK_ADD, NULL);
     if (rtv != -1){
         fs_write_inode(inode_ptr, inode_ptr->ino);
         return rtv;
@@ -445,4 +471,115 @@ void do_statfs(){
         printk("[FS] Can't find file system! :(\n");
     }
     return;
+}
+
+char dir[FS_PATH_DEPTH][FS_NAME_LEN];
+/* [p6] look up*/
+int fs_dentry_lookup(char *name, int cur_ino, dentry_type_t dtype){
+    inode_t tmp_inode;
+    fs_read_inode(&tmp_inode, cur_ino);
+    assert(tmp_inode.type == I_DIR);
+
+    dentry_t tmp_dentry;
+    tmp_dentry.dtype = dtype;
+    strcpy(tmp_dentry.name, name);
+
+    int rt_ino = -1;
+    // Direct
+    rt_ino = walkthrough_index(0, (int *)tmp_inode.direct, DIRECT_NUM, 0, 0, FS_WALK_QUERY, &tmp_dentry);
+    if (rt_ino != -1)
+        return rt_ino;
+
+    // Indirect1
+    rt_ino = walkthrough_index(1, (int *)tmp_inode.indirect1, INDIRECT1_NUM, 0, 0, FS_WALK_QUERY, &tmp_dentry);
+    if (rt_ino != -1)
+        return rt_ino;
+
+    // Indirect2
+    rt_ino = walkthrough_index(2, (int *)tmp_inode.indirect2, INDIRECT2_NUM, 0, 0, FS_WALK_QUERY, &tmp_dentry);
+    if (rt_ino != -1)
+        return rt_ino;
+    
+    // Indirect3
+    rt_ino = walkthrough_index(3, (int *)tmp_inode.indirect3, INDIRECT3_NUM, 0, 0, FS_WALK_QUERY, &tmp_dentry);
+    if (rt_ino != -1)
+        return rt_ino;
+
+    return rt_ino;
+}
+
+/* [p6] return the depth of path, for example, 'genshin/start' is depth 2, 'genshin' is depth 1, '/genshin' is depth 2*/
+int path_parser(char *path){
+    int len = strlen(path), dep = 0;
+    for (int cur = 0, dir_cur; cur < len;){
+        dir_cur = 0;
+        while (path[cur] != '/' && cur < len){
+            dir[dep][dir_cur] = path[cur];
+            dir_cur++;
+            cur++;
+        }
+        dir[dep][dir_cur] = '\0';
+        cur++;
+        dep++;
+    }
+    return dep;
+}
+
+int walk_path(char *path){
+    int cpuid = get_current_cpu_id();
+    int dep = path_parser(path);
+    int cur_ino, i_start = 0;
+    if (dir[0][0] == '\0'){                              // absolute
+        cur_ino = 0;
+        i_start = 1;
+    }
+    else
+        cur_ino = current_running[cpuid]->pwd;        // relative
+
+    for (int i = i_start; i < dep; i++){
+        cur_ino = fs_dentry_lookup(dir[i], cur_ino, D_DIR);
+        if (cur_ino == -1){
+            printk("[FS] Error: unknown dir: %s\n", dir[i]);
+            return -1;
+        }
+    }
+    return cur_ino;
+}
+
+int do_cd(char *path){
+    int cpuid = get_current_cpu_id();
+    int cur_ino = walk_path(path);
+    if (cur_ino != -1)
+        current_running[cpuid]->pwd = cur_ino;
+    return cur_ino;
+}
+
+// [p6] ls (mode: -a(0b01), -l(0b10), -a & -l(0b11))
+int do_ls(int mode, char *path){
+    int cpuid = get_current_cpu_id();
+    int cur_ino = (path == NULL) ? current_running[cpuid]->pwd : walk_path(path);
+
+    if (cur_ino != -1){
+        inode_t tmp_inode;
+        fs_read_inode(&tmp_inode, cur_ino);
+
+        dentry_t *dentry_ptr;
+        char tmp_blk[FS_BLOCK_SIZE];
+        int ITE_BOUND = FS_BLOCK_SIZE / FS_DENTRY_SIZE;
+        for (int index = 0;;index++){
+            int sec_offset = fs_get_file_blk(index, &tmp_inode);
+            if (sec_offset == 0)    break;
+            fs_read_block(sec_offset, tmp_blk);
+            dentry_ptr = (dentry_t *)tmp_blk;
+            for (int i = 0; i < ITE_BOUND; i++)
+                if (dentry_ptr[i].dtype != D_NULL){
+                    printk("%s ", dentry_ptr[i].name);
+                }
+        }
+        printk("\n");
+        return 1;
+    }
+    else{
+        return 0;
+    }
 }

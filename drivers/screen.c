@@ -41,11 +41,19 @@ static void screen_write_ch(char ch)
     {
         current_running[cpuid]->cursor_x = 0;
         current_running[cpuid]->cursor_y++;
+        if (current_running[cpuid]->cursor_y >= SCREEN_HEIGHT)
+            current_running[cpuid]->cursor_y--;
     }
     else
     {
         new_screen[SCREEN_LOC(current_running[cpuid]->cursor_x, current_running[cpuid]->cursor_y)] = ch;
         current_running[cpuid]->cursor_x++;
+        if (current_running[cpuid]->cursor_x >= SCREEN_WIDTH){
+            current_running[cpuid]->cursor_x = 0;
+            current_running[cpuid]->cursor_y++;
+            if (current_running[cpuid]->cursor_y >= SCREEN_HEIGHT)
+                current_running[cpuid]->cursor_y--;
+        }
     }
 }
 

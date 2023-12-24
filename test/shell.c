@@ -185,6 +185,27 @@ void mkfs(){
     sys_mkfs(force);
 }
 
+void cd(){
+    sys_cd(arg[1]);
+}
+
+void ls(){
+    int mode = 0;
+    char *path = NULL;
+    for (int i = 1; i < argc; i++){
+        if (!strcmp(arg[i], "-a")){
+            mode |= 0b01;
+            continue;
+        }
+        if (!strcmp(arg[i], "-l")){
+            mode |= 0b10;
+            continue;
+        }
+        path = arg[i];
+    }
+    sys_ls(mode, path);
+}
+
 void statfs(){
     sys_statfs();
 }
@@ -194,35 +215,43 @@ int check_cmd(){
     parse_buffer();
     if (!strcmp(arg[0], "ps")){
         ps();
-        cmd_found = 1;
+        return cmd_found = 1;
     }
     if (!strcmp(arg[0], "ms")){
         ms();
-        cmd_found = 1;
+        return cmd_found = 1;
     }
     if (!strcmp(arg[0], "clear")){
         clear();
-        cmd_found = 1;
+        return cmd_found = 1;
     }
     if (!strcmp(arg[0], "exec")){
         exec();
-        cmd_found = 1;
+        return cmd_found = 1;
     }
     if (!strcmp(arg[0], "kill")){
         kill();
-        cmd_found = 1;
+        return cmd_found = 1;
     }
     if (!strcmp(arg[0], "taskset")){
         taskset();
-        cmd_found = 1;
+        return cmd_found = 1;
     }
     if (!strcmp(arg[0], "mkfs")){
         mkfs();
-        cmd_found = 1;
+        return cmd_found = 1;
     }
     if (!strcmp(arg[0], "statfs")){
         statfs();
-        cmd_found = 1;
+        return cmd_found = 1;
+    }
+    if (!strcmp(arg[0], "cd")){
+        cd();
+        return cmd_found = 1;
+    }
+    if (!strcmp(arg[0], "ls")){
+        ls();
+        return cmd_found = 1;
     }
     return cmd_found;
 }

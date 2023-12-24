@@ -121,6 +121,9 @@ typedef struct pcb
 
     /* [p4] page dir */
     uintptr_t pgdir;                // pgdir, saved as kva
+
+    /* [p6] pwd */
+    uint64_t pwd;                   // current ino
 } pcb_t;
 
 extern int pid_n;

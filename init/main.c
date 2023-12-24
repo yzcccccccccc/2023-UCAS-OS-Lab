@@ -163,6 +163,7 @@ static void init_pcb(void)
     fake_argv[0] = (char *)(&name);
     int shell_pid = init_pcb_vname(name, 1, fake_argv);
     pcb[shell_pid].mask = 0x3;                  // both core can exec
+    pcb[shell_pid].pwd = 0;
 
     /* TODO: [p2-task1] remember to initialize 'current_running' */
     pid0_core0_pcb.pf_list.next = pid0_core0_pcb.pf_list.prev = &(pid0_core0_pcb.pf_list);
@@ -231,6 +232,8 @@ static void init_syscall(void)
 
     syscall[SYSCALL_FS_MKFS]            = (long (*)())do_mkfs;
     syscall[SYSCALL_FS_STATFS]          = (long (*)())do_statfs;
+    syscall[SYSCALL_FS_CD]              = (long (*)())do_cd;
+    syscall[SYSCALL_FS_LS]              = (long (*)())do_ls;
 }
 /************************************************************/
 

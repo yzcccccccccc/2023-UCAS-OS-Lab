@@ -21,7 +21,8 @@ pcb_t pid0_core0_pcb = {
     .user_sp = (ptr_t)(pid0_core0_stack + 2 * PAGE_SIZE),
     .cid = 0,
     .mask = 0x1,
-    .name = "init0"
+    .name = "init0",
+    .pwd = 0
 };
 pcb_t pid0_core1_pcb = {
     .pid = 0,
@@ -29,7 +30,8 @@ pcb_t pid0_core1_pcb = {
     .user_sp = (ptr_t)(pid0_core1_stack + 2 * PAGE_SIZE),
     .cid = 1,
     .mask = 0x2,
-    .name = "init1"
+    .name = "init1",
+    .pwd = 0
 };
 
 LIST_HEAD(ready_queue);

@@ -337,6 +337,16 @@ void sys_statfs(){
     invoke_syscall(SYSCALL_FS_STATFS, 0, 0, 0, 0, 0);
 }
 
+int sys_cd(char *path){
+    path = (char *)copy_str_to_secPage(path);
+    return invoke_syscall(SYSCALL_FS_CD, (long)path, 0, 0, 0, 0);
+}
+
+int sys_ls(int mode, char *path){
+    path = (char *)copy_str_to_secPage(path);
+    return invoke_syscall(SYSCALL_FS_LS, (long)mode, (long)path, 0, 0, 0);
+}
+
 int sys_fopen(char *name, int option){
     return invoke_syscall(SYSCALL_FS_FOPEN, (long)name, (long)option, 0, 0, 0);
 }

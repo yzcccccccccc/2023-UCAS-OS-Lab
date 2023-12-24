@@ -132,6 +132,8 @@ typedef struct fsdesc{
 }fsdesc_t;
 extern fsdesc_t fdtable[NUM_FDESCS];
 
+#define FS_PATH_DEPTH   20
+#define FS_NAME_LEN     20
 
 extern void fs_read_block(int sec_offset, void *dest);
 extern void fs_write_block(int sec_offset, void *src);
@@ -148,4 +150,6 @@ extern int fs_get_file_blk(int blk_index, inode_t *inode_ptr);
 
 extern void do_mkfs(int force);
 extern void do_statfs();
+extern int do_cd(char *path);
+extern int do_ls(int mode, char *path);
 #endif

@@ -156,6 +156,12 @@ pid_t init_pcb_vname(char *name, int argc, char *argv[]){
         else
             pcb_new->mask = current_running[cpuid]->mask;   // inherit
 
+        // [p6] pwd
+        if (current_running[cpuid] == NULL)
+            pcb_new->pwd = 0;
+        else
+            pcb_new->pwd = current_running[cpuid]->pwd;
+
         strcpy(pcb_new->name, name);
         list_insert(&ready_queue, &pcb_new->list);
 
