@@ -352,6 +352,11 @@ int sys_mkdir(char *path){
     return invoke_syscall(SYSCALL_FS_MKDIR, (long)path, 0, 0, 0, 0);
 }
 
+int sys_rmdir(char *path){
+    path = (char *)copy_str_to_secPage(path);
+    return invoke_syscall(SYSCALL_FS_RMDIR, (long)path, 0, 0, 0, 0);
+}
+
 int sys_fopen(char *name, int option){
     return invoke_syscall(SYSCALL_FS_FOPEN, (long)name, (long)option, 0, 0, 0);
 }

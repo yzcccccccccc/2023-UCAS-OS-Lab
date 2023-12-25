@@ -152,5 +152,6 @@ extern void do_statfs();
 extern int do_cd(char *path);
 extern int do_ls(int mode, char *path);
 extern int do_mkdir(char *path);
+extern int do_rmdir(char *path);
 extern void do_pwd();
 #endif

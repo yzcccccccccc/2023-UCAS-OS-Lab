@@ -236,6 +236,7 @@ static void init_syscall(void)
     syscall[SYSCALL_FS_LS]              = (long (*)())do_ls;
     syscall[SYSCALL_FS_MKDIR]           = (long (*)())do_mkdir;
     syscall[SYSCALL_FS_PWD]             = (long (*)())do_pwd;
+    syscall[SYSCALL_FS_RMDIR]           = (long (*)())do_rmdir;
 }
 /************************************************************/
 

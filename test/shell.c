@@ -223,6 +223,15 @@ void mkdir(){
     }
 }
 
+void rmdir(){
+    if (argc < 2){
+        printf("[FS] Error: missing operand.\n");
+    }
+    else{
+        sys_rmdir(arg[1]);
+    }
+}
+
 void pwd(){
     sys_pwd();
 }
@@ -276,6 +285,10 @@ int check_cmd(){
     }
     if (!strcmp(arg[0], "pwd")){
         pwd();
+        return cmd_found = 1;
+    }
+    if (!strcmp(arg[0], "rmdir")){
+        rmdir();
         return cmd_found = 1;
     }
     return cmd_found;

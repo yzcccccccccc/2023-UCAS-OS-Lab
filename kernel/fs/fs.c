@@ -128,13 +128,31 @@ int alloc_datablk(){
                     if ((data_bitmap_buf[i] & byte_bits[bit_cur]) == 0){
                         data_bitmap_buf[i] |= byte_bits[bit_cur];
                         fs_write_datamap(id);
-                        return (id * 4096 * 8 + i * 8 + bit_cur) * 8 + FS_DATA_OFFSET;
+                        return (id * 4096 * 8 + i * 8 + bit_cur) * FS_BLOCK_SECNUM + FS_DATA_OFFSET;
                     }
                 }
             }
         }
     }
     return -1;
+}
+
+void release_inode(int ino){
+    int index = ino / 8;
+    int bit_cur = ino % 8;
+    fs_read_inodemap();
+    inode_bitmap_buf[index] &= ~(byte_bits[bit_cur]);
+    fs_write_inodemap();
+}
+
+void release_datablk(int sec_offset){
+    int bit_cur = (sec_offset - FS_DATA_OFFSET) / FS_BLOCK_SECNUM % 8;
+    int id = (sec_offset - FS_DATA_OFFSET) / FS_BLOCK_SECNUM / (4096 * 8);
+    int index = (sec_offset - FS_DATA_OFFSET) / FS_BLOCK_SECNUM % (4096 * 8) / 8;
+
+    fs_read_datamap(id);
+    data_bitmap_buf[index] &= ~(byte_bits[bit_cur]);
+    fs_write_datamap(id);
 }
 
 // [p6] adding a data block for cur_ino
@@ -168,7 +186,12 @@ int walkthrough_index(int target_lev, int *index_list, int lev0_num, int cur_lev
             }
         }
         if (mode == FS_WALK_DEL){
-            // to be continued
+            for (int i = 0; i < ITE_BOUND; i++){
+                if (index_list[i] != 0){
+                    release_datablk(index_list[i]);
+                    index_list[i] = 0;
+                }
+            }
         }
         if (mode == FS_WALK_QUERY){
             char wk_blk[FS_BLOCK_SIZE];
@@ -199,6 +222,10 @@ int walkthrough_index(int target_lev, int *index_list, int lev0_num, int cur_lev
             if (index_list[i] != 0){
                 fs_read_block(index_list[i], wk_blk);
                 rtv = walkthrough_index(target_lev, (int *)wk_blk, lev0_num, cur_lev + 1, index_list[i], mode, target_dentry);
+                if (mode == FS_WALK_DEL){
+                    release_datablk(index_list[i]);
+                    index_list[i] = 0;
+                }
             }
         }
     }
@@ -267,10 +294,6 @@ int fs_addFile(inode_t *cur_inode, inode_type_t type, file_access_t access, char
 
         fs_mk_dentry(&tmp_inode, D_DIR, ".", ino);
         fs_mk_dentry(&tmp_inode, D_DIR, "..", cur_inode->ino);
-        tmp_inode.link_cnt = 2;
-
-        cur_inode->link_cnt++;
-        fs_write_inode(cur_inode, cur_inode->ino);
     }
 
     // name
@@ -448,7 +471,7 @@ void do_mkfs(int force){
         // hard-link ?
         fs_mk_dentry(&tmp_inode, D_DIR, ".", ino);
         fs_mk_dentry(&tmp_inode, D_DIR, "..", ino);
-        tmp_inode.link_cnt = 2;
+        tmp_inode.link_cnt = 0;
 
         // name
         strcpy(tmp_inode.name, "/");
@@ -684,4 +707,101 @@ void do_pwd(){
     print_pwd(current_running[cpuid]->pwd);
     printk("\n");
     return;
+}
+
+void fs_release_inode(inode_t *inode_ptr){
+    // release datablk
+}
+
+// [p6] rmdir
+int fs_chk_dir_empty(int ino){
+    inode_t tmp_inode;
+    fs_read_inode(&tmp_inode, ino);
+    assert(tmp_inode.type == I_DIR);
+
+    // Check every dir entry
+    char tmp_blk[FS_BLOCK_SIZE];
+    for (int index = 0;;index++){
+        int sec_offset = fs_get_file_blk(index, &tmp_inode);
+        if (sec_offset == 0)    break;
+
+        // check for emtpy entry
+        fs_read_block(sec_offset, tmp_blk);
+        dentry_t *dentry_ptr = (dentry_t *)tmp_blk;
+        int ITE_BOUND = FS_BLOCK_SIZE / FS_DENTRY_SIZE;
+        for (int i = 0; i < ITE_BOUND; i++){
+            if (dentry_ptr[i].dtype == D_FILE)
+                return 0;
+            if (dentry_ptr[i].ino != ino && dentry_ptr[i].ino != tmp_inode.pino && dentry_ptr[i].dtype == D_DIR){
+                //if (!fs_chk_dir_empty(dentry_ptr[i].ino))
+                    return 0;
+            }
+        }
+    }
+
+    // emtpy
+    return 1;
+}
+
+void fs_del_dir(int ino){
+    inode_t tmp_inode;
+    fs_read_inode(&tmp_inode, ino);
+    assert(tmp_inode.type == I_DIR);
+
+    // check children
+    char tmp_blk[FS_BLOCK_SIZE];
+    for (int index = 0;;index++){
+        int sec_offset = fs_get_file_blk(index, &tmp_inode);
+        if (sec_offset == 0)    break;
+
+        // check for emtpy entry
+        fs_read_block(sec_offset, tmp_blk);
+        dentry_t *dentry_ptr = (dentry_t *)tmp_blk;
+        int ITE_BOUND = FS_BLOCK_SIZE / FS_DENTRY_SIZE;
+        for (int i = 0; i < ITE_BOUND; i++){
+            if (dentry_ptr[i].dtype == D_FILE)
+                assert(0);
+            if (dentry_ptr[i].ino != ino && dentry_ptr[i].ino != tmp_inode.pino && dentry_ptr[i].dtype == D_DIR){
+                fs_del_dir(dentry_ptr[i].ino);
+            }
+        }
+    }
+
+    // Release data block
+    walkthrough_index(0, (int *)tmp_inode.direct, DIRECT_NUM, 0, 0, FS_WALK_DEL, NULL);
+    walkthrough_index(1, (int *)tmp_inode.indirect1, INDIRECT1_NUM, 0, 0, FS_WALK_DEL, NULL);
+    walkthrough_index(2, (int *)tmp_inode.indirect2, INDIRECT2_NUM, 0, 0, FS_WALK_DEL, NULL);
+    walkthrough_index(3, (int *)tmp_inode.indirect3, INDIRECT3_NUM, 0, 0, FS_WALK_DEL, NULL);
+
+    // Release inode
+    release_inode(ino);
+}
+
+int do_rmdir(char *path){
+    if (path == NULL){
+        printk("[FS] Error: missing operand.\n");
+        return 0;
+    }
+
+    int cur_ino = walk_path(path, 0);
+    inode_t tmp_inode;
+    fs_read_inode(&tmp_inode, cur_ino);
+    if (tmp_inode.type != I_DIR){
+        printk("[FS] Error: %s is not a directory.\n");
+        return 0;
+    }
+    if (tmp_inode.ino == 0){
+        printk("[FS] Panic: trying to delete root, aborting... \n");
+        return 0;
+    }
+
+    // chk emtpy
+    if (!fs_chk_dir_empty(cur_ino)){
+        printk("[FS] Error: Directory not empty.\n");
+        return 0;
+    }
+
+    // delte
+    fs_del_dir(cur_ino);
+    return 1;
 }
