@@ -165,9 +165,6 @@ int fs_addBlk_ino(int cur_ino){
 // [p6] walk! add a block (future: delete blocks, look up blocks)
 // target_lev: 0~3, index_list: array of sector id, lev0_num: num of items in level0
 // cur_lev: current level, par_sec: parent sector id
-#define FS_WALK_ADD 0
-#define FS_WALK_DEL 1
-#define FS_WALK_QUERY 2
 int walkthrough_index(int target_lev, int *index_list, int lev0_num, int cur_lev, int par_sec, int mode,
                         dentry_t *target_dentry){
     int ITE_BOUND = cur_lev == 0 ? lev0_num : FS_BLOCK_SIZE / sizeof(int), rtv = -1;
@@ -292,8 +289,8 @@ int fs_addFile(inode_t *cur_inode, inode_type_t type, file_access_t access, char
         fs_addBlk_ptr(&tmp_inode);
         tmp_inode.file_size = FS_BLOCK_SIZE;
 
-        fs_mk_dentry(&tmp_inode, D_DIR, ".", ino);
-        fs_mk_dentry(&tmp_inode, D_DIR, "..", cur_inode->ino);
+        fs_mk_dentry(&tmp_inode, D_DIR, ".", ino, FS_MKDENTRY_ADD);
+        fs_mk_dentry(&tmp_inode, D_DIR, "..", cur_inode->ino, FS_MKDENTRY_ADD);
     }
 
     // name
@@ -304,7 +301,7 @@ int fs_addFile(inode_t *cur_inode, inode_type_t type, file_access_t access, char
 }
 
 // [p6] insert a dir entry
-int fs_mk_dentry(inode_t *inode_ptr, dentry_type_t dtype, char *name, int target_ino){
+int fs_mk_dentry(inode_t *inode_ptr, dentry_type_t dtype, char *name, int target_ino, int mode){
     char tmp_blk[FS_BLOCK_SIZE];
     assert(inode_ptr->type == I_DIR);
     for (int index = 0;;index++){
@@ -316,10 +313,15 @@ int fs_mk_dentry(inode_t *inode_ptr, dentry_type_t dtype, char *name, int target
         dentry_t *dentry_ptr = (dentry_t *)tmp_blk;
         int ITE_BOUND = FS_BLOCK_SIZE / FS_DENTRY_SIZE;
         for (int i = 0; i < ITE_BOUND; i++){
-            if (dentry_ptr[i].dtype == D_NULL){
+            if (mode == FS_MKDENTRY_ADD && dentry_ptr[i].dtype == D_NULL){
                 dentry_ptr[i].ino = target_ino;
                 dentry_ptr[i].dtype = dtype;
                 strcpy(dentry_ptr[i].name, name);
+                fs_write_block(sec_offset, tmp_blk);
+                return 1;
+            }
+            if (mode == FS_MKDENTRY_DEL && dentry_ptr[i].dtype == dtype && dentry_ptr[i].ino == target_ino && !strcmp(name, dentry_ptr[i].name)){
+                dentry_ptr[i].dtype = D_NULL;
                 fs_write_block(sec_offset, tmp_blk);
                 return 1;
             }
@@ -469,8 +471,8 @@ void do_mkfs(int force){
         tmp_inode.file_size = FS_BLOCK_SIZE;
 
         // hard-link ?
-        fs_mk_dentry(&tmp_inode, D_DIR, ".", ino);
-        fs_mk_dentry(&tmp_inode, D_DIR, "..", ino);
+        fs_mk_dentry(&tmp_inode, D_DIR, ".", ino, FS_MKDENTRY_ADD);
+        fs_mk_dentry(&tmp_inode, D_DIR, "..", ino, FS_MKDENTRY_ADD);
         tmp_inode.link_cnt = 0;
 
         // name
@@ -683,7 +685,7 @@ int do_mkdir(char *path){
         return 0;
     }
     else{
-        fs_mk_dentry(&tmp_inode, D_DIR, dir[dir_dep - 1], ino);
+        fs_mk_dentry(&tmp_inode, D_DIR, dir[dir_dep - 1], ino, FS_MKDENTRY_ADD);
         tmp_inode.modify_time = get_timer();
         fs_write_inode(&tmp_inode, tmp_inode.ino);
     }
@@ -772,6 +774,11 @@ void fs_del_dir(int ino){
     walkthrough_index(1, (int *)tmp_inode.indirect1, INDIRECT1_NUM, 0, 0, FS_WALK_DEL, NULL);
     walkthrough_index(2, (int *)tmp_inode.indirect2, INDIRECT2_NUM, 0, 0, FS_WALK_DEL, NULL);
     walkthrough_index(3, (int *)tmp_inode.indirect3, INDIRECT3_NUM, 0, 0, FS_WALK_DEL, NULL);
+
+    // wipe out dentry
+    inode_t par_inode;
+    fs_read_inode(&par_inode, tmp_inode.pino);
+    fs_mk_dentry(&par_inode, D_DIR, tmp_inode.name, tmp_inode.ino, FS_MKDENTRY_DEL);
 
     // Release inode
     release_inode(ino);

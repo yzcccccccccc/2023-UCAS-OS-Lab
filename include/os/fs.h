@@ -135,6 +135,13 @@ extern fsdesc_t fdtable[NUM_FDESCS];
 #define FS_PATH_DEPTH   20
 #define FS_NAME_LEN     20
 
+#define FS_MKDENTRY_ADD 0
+#define FS_MKDENTRY_DEL 1
+
+#define FS_WALK_ADD 0
+#define FS_WALK_DEL 1
+#define FS_WALK_QUERY 2
+
 extern void fs_read_block(int sec_offset, void *dest);
 extern void fs_write_block(int sec_offset, void *src);
 extern void fs_read_sector(int sec_offset, void *dest);
@@ -143,7 +150,7 @@ extern void fs_clearBlk(int sec_offset);
 extern void fs_clearSec(int sec_offset);
 extern int fs_addBlk_ino(int cur_ino);
 extern int fs_addBlk_ptr(inode_t *inode_ptr);
-extern int fs_mk_dentry(inode_t *inode_ptr, dentry_type_t dtype, char *name, int target_ino);
+extern int fs_mk_dentry(inode_t *inode_ptr, dentry_type_t dtype, char *name, int target_ino, int mode);
 extern int fs_rm_dentry();
 extern int fs_get_file_blk(int blk_index, inode_t *inode_ptr);
 
