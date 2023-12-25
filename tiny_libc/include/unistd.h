@@ -96,5 +96,6 @@ int sys_rm(char *path);
 void sys_pwd();
 int sys_cat(char *path);
 int sys_ln(char *src_path, char *dst_path);
+int sys_lseek(int fd, int offset, int whence, int rw);
 
 #endif

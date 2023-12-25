@@ -169,4 +169,5 @@ extern int do_fread(int fd, char *buff, int size);
 extern int do_fwrite(int fd, char *buff, int size);
 extern int do_cat(char *path);
 extern int do_ln(char *src_path, char *dst_path);
+extern int do_lseek(int fd, int offset, int whence, int rw);
 #endif

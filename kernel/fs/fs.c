@@ -1086,6 +1086,10 @@ int do_ln(char *src_path, char *dst_path){
 int do_lseek(int fd, int offset, int whence, int rw){
     if (fdtable[fd].ino == -1)
         return -1;
+    if (!(whence == SEEK_SET || whence == SEEK_CUR || whence == SEEK_END))
+        return -1;
+    if (!(rw == SEEK_RP || rw == SEEK_WP))
+        return -1;
     inode_t tmp_inode;
     fs_read_inode(&tmp_inode, fdtable[fd].ino);
 
