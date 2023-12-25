@@ -841,6 +841,8 @@ int do_touch(char *path){
         return 0;
     }
     int cur_ino = walk_path(path, 1);
+    if (cur_ino == -1)
+        return 0;
     inode_t tmp_inode;
     fs_read_inode(&tmp_inode, cur_ino);
     dentry_t tmp_dentry;
@@ -1015,4 +1017,30 @@ int do_fwrite(int fd, char *buff, int size){
     tmp_inode.file_size += ed_offset - st_offset;
     fs_write_inode(&tmp_inode, tmp_inode.ino);
     return ed_offset - st_offset;
+}
+
+// [p6] cat!
+#define LIMIT_SIZE 200
+int do_cat(char *path){
+    int cur_ino = walk_path(path, 0);
+    if (cur_ino == -1)
+        return 0;
+
+    inode_t tmp_inode;
+    fs_read_inode(&tmp_inode, cur_ino);
+
+    char tmp_blk[FS_BLOCK_SIZE];
+    int cur = 0;
+    for (int index, tmp_cur; cur < LIMIT_SIZE && cur < tmp_inode.file_size; cur++, tmp_cur++){
+        index = cur / FS_BLOCK_SIZE;
+        if (cur % FS_BLOCK_SIZE == 0){
+            tmp_cur = 0;
+            int sec_offset = fs_get_file_blk(index, &tmp_inode);
+            assert(sec_offset != 0);
+            fs_read_block(sec_offset, tmp_blk);
+        }
+        printk("%c", tmp_blk[tmp_cur]);
+    }
+    printk("\n(filesz: %d bytes, showing %d bytes.)\n", tmp_inode.file_size, cur);
+    return 1;
 }

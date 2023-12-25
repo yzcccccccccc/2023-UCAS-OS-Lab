@@ -254,6 +254,15 @@ void rm(){
     }
 }
 
+void cat(){
+    if (argc < 2){
+        printf("[FS] Error: missing operand.\n");
+    }
+    else{
+        sys_cat(arg[1]);
+    }
+}
+
 int check_cmd(){
     int cmd_found = 0;
     parse_buffer();
@@ -315,6 +324,10 @@ int check_cmd(){
     }
     if (!strcmp(arg[0], "rm")){
         rm();
+        return cmd_found = 1;
+    }
+    if (!strcmp(arg[0], "cat")){
+        cat();
         return cmd_found = 1;
     }
     return cmd_found;

@@ -167,4 +167,5 @@ extern int do_fopen(char *path, int access);
 extern int do_fclose(int fd);
 extern int do_fread(int fd, char *buff, int size);
 extern int do_fwrite(int fd, char *buff, int size);
+extern int do_cat(char *path);
 #endif

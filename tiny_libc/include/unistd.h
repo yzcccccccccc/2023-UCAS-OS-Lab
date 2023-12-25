@@ -94,5 +94,6 @@ int sys_fwrite(int fd, char *buff, int length);
 int sys_touch(char *path);
 int sys_rm(char *path);
 void sys_pwd();
+int sys_cat(char *path);
 
 #endif
