@@ -771,10 +771,19 @@ int fs_chk_dir_empty(int ino){
     return 1;
 }
 
-void fs_del(int ino, inode_type_t I_TYPE){
+void fs_del(int ino, inode_type_t I_TYPE, char *name){
     inode_t tmp_inode;
     fs_read_inode(&tmp_inode, ino);
     assert(tmp_inode.type == I_TYPE);
+
+    // wipe out dentry
+    inode_t par_inode;
+    fs_read_inode(&par_inode, tmp_inode.pino);
+    fs_mk_dentry(&par_inode, I_TYPE == I_FILE ? D_FILE : D_DIR, name, tmp_inode.ino, FS_MKDENTRY_DEL);
+    if (I_TYPE == I_DIR){
+        par_inode.link_cnt--;       // '..'
+        fs_write_inode(&par_inode, par_inode.ino);
+    }
 
     if (I_TYPE == I_FILE){
         tmp_inode.link_cnt--;
@@ -789,15 +798,6 @@ void fs_del(int ino, inode_type_t I_TYPE){
     walkthrough_index(1, (int *)tmp_inode.indirect1, INDIRECT1_NUM, 0, 0, FS_WALK_DEL, NULL);
     walkthrough_index(2, (int *)tmp_inode.indirect2, INDIRECT2_NUM, 0, 0, FS_WALK_DEL, NULL);
     walkthrough_index(3, (int *)tmp_inode.indirect3, INDIRECT3_NUM, 0, 0, FS_WALK_DEL, NULL);
-
-    // wipe out dentry
-    inode_t par_inode;
-    fs_read_inode(&par_inode, tmp_inode.pino);
-    fs_mk_dentry(&par_inode, I_TYPE == I_FILE ? D_FILE : D_DIR, tmp_inode.name, tmp_inode.ino, FS_MKDENTRY_DEL);
-    if (I_TYPE == I_DIR){
-        par_inode.link_cnt--;       // '..'
-        fs_write_inode(&par_inode, par_inode.ino);
-    }
 
     // Release inode
     release_inode(ino);
@@ -831,7 +831,7 @@ int do_rmdir(char *path){
     }
 
     // delte
-    fs_del(cur_ino, I_DIR);
+    fs_del(cur_ino, I_DIR, dir[dir_dep - 1]);
     return 1;
 }
 
@@ -898,7 +898,7 @@ int do_rm(char *path){
     }
 
     // delte
-    fs_del(cur_ino, I_FILE);
+    fs_del(cur_ino, I_FILE, dir[dir_dep - 1]);
     return 1;
 }
 
@@ -1028,6 +1028,10 @@ int do_cat(char *path){
 
     inode_t tmp_inode;
     fs_read_inode(&tmp_inode, cur_ino);
+    if (tmp_inode.type != I_FILE){
+        printk("[FS] Error: not a file.\n");
+        return 0;
+    }
 
     char tmp_blk[FS_BLOCK_SIZE];
     int cur = 0;
@@ -1042,5 +1046,33 @@ int do_cat(char *path){
         printk("%c", tmp_blk[tmp_cur]);
     }
     printk("\n(filesz: %d bytes, showing %d bytes.)\n", tmp_inode.file_size, cur);
+    return 1;
+}
+
+// [p6] ln (src_path: file to be created, dst_path: target file)
+int do_ln(char *src_path, char *dst_path){
+    int dst_ino = walk_path(dst_path, 0);
+    if (dst_ino == -1)
+        return 0;
+    
+    int src_ino = walk_path(src_path, 1);
+    if (src_ino == -1)
+        return 0;
+
+    inode_t src_inode, dst_inode;
+    fs_read_inode(&src_inode, src_ino);
+    if (src_inode.type != I_DIR){
+        printk("[FS] Error: Src dir error.\n");
+        return 0;
+    }
+
+    fs_read_inode(&dst_inode, dst_ino);
+
+    // src part
+    fs_mk_dentry(&src_inode, dst_inode.type == I_DIR ? D_DIR : D_FILE, dir[dir_dep - 1], dst_inode.ino, FS_MKDENTRY_ADD);
+    
+    // dst part
+    dst_inode.link_cnt++;
+    fs_write_inode(&dst_inode, dst_inode.ino);
     return 1;
 }

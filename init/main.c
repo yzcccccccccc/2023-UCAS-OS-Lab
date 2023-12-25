@@ -244,6 +244,7 @@ static void init_syscall(void)
     syscall[SYSCALL_FS_FREAD]           = (long (*)())do_fread;
     syscall[SYSCALL_FS_FWRITE]          = (long (*)())do_fwrite;
     syscall[SYSCALL_FS_CAT]             = (long (*)())do_cat;
+    syscall[SYSCALL_FS_LN]              = (long (*)())do_ln;
 }
 /************************************************************/
 

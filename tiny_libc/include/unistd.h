@@ -95,5 +95,6 @@ int sys_touch(char *path);
 int sys_rm(char *path);
 void sys_pwd();
 int sys_cat(char *path);
+int sys_ln(char *src_path, char *dst_path);
 
 #endif

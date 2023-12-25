@@ -391,3 +391,9 @@ int sys_cat(char *path){
     path = (char *)copy_str_to_secPage(path);
     return invoke_syscall(SYSCALL_FS_CAT, (long)path, 0, 0, 0, 0);
 }
+
+int sys_ln(char *src_path, char *dst_path){
+    src_path = (char *)copy_str_to_secPage(src_path);
+    dst_path = (char *)copy_str_to_secPage(dst_path);
+    return invoke_syscall(SYSCALL_FS_LN, (long)src_path, (long)dst_path, 0, 0, 0);
+}
