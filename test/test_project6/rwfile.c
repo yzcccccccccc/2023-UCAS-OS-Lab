@@ -8,6 +8,11 @@ int main(void)
 {
     int fd = sys_fopen("1.txt", O_RDWR);
 
+    if (fd == -1){
+        printf("file doesn't exist, exiting...\n");
+        return 0;
+    }
+
     // write 'hello world!' * 10
     for (int i = 0; i < 10; i++)
     {

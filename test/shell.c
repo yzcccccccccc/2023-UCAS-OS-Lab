@@ -232,8 +232,26 @@ void rmdir(){
     }
 }
 
+void touch(){
+    if (argc < 2){
+        printf("[FS] Error: missing operand.\n");
+    }
+    else{
+        sys_touch(arg[1]);
+    }
+}
+
 void pwd(){
     sys_pwd();
+}
+
+void rm(){
+    if (argc < 2){
+        printf("[FS] Error: missing operand.\n");
+    }
+    else {
+        sys_rm(arg[1]);
+    }
 }
 
 int check_cmd(){
@@ -289,6 +307,14 @@ int check_cmd(){
     }
     if (!strcmp(arg[0], "rmdir")){
         rmdir();
+        return cmd_found = 1;
+    }
+    if (!strcmp(arg[0], "touch")){
+        touch();
+        return cmd_found = 1;
+    }
+    if (!strcmp(arg[0], "rm")){
+        rm();
         return cmd_found = 1;
     }
     return cmd_found;

@@ -237,6 +237,12 @@ static void init_syscall(void)
     syscall[SYSCALL_FS_MKDIR]           = (long (*)())do_mkdir;
     syscall[SYSCALL_FS_PWD]             = (long (*)())do_pwd;
     syscall[SYSCALL_FS_RMDIR]           = (long (*)())do_rmdir;
+    syscall[SYSCALL_FS_TOUCH]           = (long (*)())do_touch;
+    syscall[SYSCALL_FS_RM]              = (long (*)())do_rm;
+    syscall[SYSCALL_FS_FOPEN]           = (long (*)())do_fopen;
+    syscall[SYSCALL_FS_FCLOSE]          = (long (*)())do_fclose;
+    syscall[SYSCALL_FS_FREAD]           = (long (*)())do_fread;
+    syscall[SYSCALL_FS_FWRITE]          = (long (*)())do_fwrite;
 }
 /************************************************************/
 

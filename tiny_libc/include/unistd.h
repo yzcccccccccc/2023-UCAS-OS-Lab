@@ -91,6 +91,8 @@ int sys_fopen(char *name, int option);
 int sys_fclose(int fd);
 int sys_fread(int fd, char *buff, int length);
 int sys_fwrite(int fd, char *buff, int length);
+int sys_touch(char *path);
+int sys_rm(char *path);
 void sys_pwd();
 
 #endif

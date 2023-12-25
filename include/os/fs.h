@@ -161,4 +161,10 @@ extern int do_ls(int mode, char *path);
 extern int do_mkdir(char *path);
 extern int do_rmdir(char *path);
 extern void do_pwd();
+extern int do_touch(char *path);
+extern int do_rm(char *path);
+extern int do_fopen(char *path, int access);
+extern int do_fclose(int fd);
+extern int do_fread(int fd, char *buff, int size);
+extern int do_fwrite(int fd, char *buff, int size);
 #endif

@@ -373,6 +373,16 @@ int sys_fwrite(int fd, char *buff, int length){
     return invoke_syscall(SYSCALL_FS_FWRITE, (long)fd, (long)buff, (long)length, 0, 0);
 }
 
+int sys_touch(char *path){
+    path = (char *)copy_str_to_secPage(path);
+    return invoke_syscall(SYSCALL_FS_TOUCH, (long)path, 0, 0, 0, 0);
+}
+
+int sys_rm(char *path){
+    path = (char *)copy_str_to_secPage(path);
+    return invoke_syscall(SYSCALL_FS_RM, (long)path, 0, 0, 0, 0);
+}
+
 void sys_pwd(){
     invoke_syscall(SYSCALL_FS_PWD, 0, 0, 0, 0, 0);
 }
