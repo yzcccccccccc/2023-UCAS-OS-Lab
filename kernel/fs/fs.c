@@ -291,6 +291,10 @@ int fs_addFile(inode_t *cur_inode, inode_type_t type, file_access_t access, char
 
         fs_mk_dentry(&tmp_inode, D_DIR, ".", ino, FS_MKDENTRY_ADD);
         fs_mk_dentry(&tmp_inode, D_DIR, "..", cur_inode->ino, FS_MKDENTRY_ADD);
+        tmp_inode.link_cnt = 2;
+
+        cur_inode->link_cnt++;
+        fs_write_inode(cur_inode, cur_inode->ino);
     }
 
     // name
@@ -473,7 +477,7 @@ void do_mkfs(int force){
         // hard-link ?
         fs_mk_dentry(&tmp_inode, D_DIR, ".", ino, FS_MKDENTRY_ADD);
         fs_mk_dentry(&tmp_inode, D_DIR, "..", ino, FS_MKDENTRY_ADD);
-        tmp_inode.link_cnt = 0;
+        tmp_inode.link_cnt = 3;
 
         // name
         strcpy(tmp_inode.name, "/");
@@ -635,7 +639,14 @@ int do_ls(int mode, char *path){
             dentry_ptr = (dentry_t *)tmp_blk;
             for (int i = 0; i < ITE_BOUND; i++)
                 if (dentry_ptr[i].dtype != D_NULL){
-                    printk("%s ", dentry_ptr[i].name);
+                    if (mode & 0b10){
+                        // type, ino, link_cnt, size, modity_time, name
+                        inode_t d_inode;
+                        fs_read_inode(&d_inode, dentry_ptr[i].ino);
+                        printk("%s %d %d %d %d %s\n", d_inode.type == I_DIR ? "DIR " : "FILE", d_inode.ino, d_inode.link_cnt, d_inode.file_size, d_inode.modify_time, dentry_ptr[i].name);
+                    }
+                    else
+                        printk("%s ", dentry_ptr[i].name);
                 }
         }
         printk("\n");
@@ -779,6 +790,8 @@ void fs_del_dir(int ino){
     inode_t par_inode;
     fs_read_inode(&par_inode, tmp_inode.pino);
     fs_mk_dentry(&par_inode, D_DIR, tmp_inode.name, tmp_inode.ino, FS_MKDENTRY_DEL);
+    par_inode.link_cnt--;       // '..'
+    fs_write_inode(&par_inode, par_inode.ino);
 
     // Release inode
     release_inode(ino);

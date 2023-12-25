@@ -119,7 +119,7 @@ pid_t init_pcb_vname(char *name, int argc, char *argv[]){
         
         // alloc a page for kernel stack
         if (pcb_new->status == TASK_UNUSED){
-            pcb_new->kernel_stack_base = pcb_new->kernel_sp = allocPage(1) + NORMAL_PAGE_SIZE;
+            pcb_new->kernel_stack_base = pcb_new->kernel_sp = allocPage(KER_STACK_PAGE_NUM) + KER_STACK_PAGE_NUM * NORMAL_PAGE_SIZE;
         }
         else{
             pcb_new->kernel_sp  = pcb_new->kernel_stack_base;

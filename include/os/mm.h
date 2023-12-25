@@ -52,6 +52,8 @@
 #define LIST_PGF_OFFSET     16
 #define PCBLIST_PGF_OFFSET  32
 
+#define KER_STACK_PAGE_NUM  4
+
 extern int free_page_num, free_swp_page_num, free_shm_page_num;
 
 typedef enum{
