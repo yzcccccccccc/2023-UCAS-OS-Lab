@@ -1076,3 +1076,39 @@ int do_ln(char *src_path, char *dst_path){
     fs_write_inode(&dst_inode, dst_inode.ino);
     return 1;
 }
+
+// [p6] lseek
+#define SEEK_SET 0
+#define SEEK_CUR 1
+#define SEEK_END 2
+#define SEEK_RP 0
+#define SEEK_WP 1
+int do_lseek(int fd, int offset, int whence, int rw){
+    if (fdtable[fd].ino == -1)
+        return -1;
+    inode_t tmp_inode;
+    fs_read_inode(&tmp_inode, fdtable[fd].ino);
+
+    if (whence == SEEK_SET){
+        ;
+    }
+    if (whence == SEEK_CUR){
+        if (rw == SEEK_RP)
+            offset += fdtable[fd].rp;
+        else
+            offset += fdtable[fd].wp;
+    }
+    if (whence == SEEK_END)
+        offset += tmp_inode.file_size;
+
+    for (int tmp_sz = tmp_inode.file_size; tmp_sz < offset; tmp_sz += FS_BLOCK_SIZE){
+        if (fs_addBlk_ptr(&tmp_inode) == -1)    return -1;       // allocate fail 
+    }
+
+    if (rw == SEEK_RP)
+        fdtable[fd].rp = offset;
+    else
+        fdtable[fd].wp = offset;
+    tmp_inode.file_size = tmp_inode.file_size > offset ? tmp_inode.file_size : offset;
+    return offset;
+}
