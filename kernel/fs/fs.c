@@ -771,14 +771,14 @@ int fs_chk_dir_empty(int ino){
     return 1;
 }
 
-void fs_del(int ino, inode_type_t I_TYPE, char *name){
+void fs_del(int pino, int ino, inode_type_t I_TYPE, char *name){
     inode_t tmp_inode;
     fs_read_inode(&tmp_inode, ino);
     assert(tmp_inode.type == I_TYPE);
 
     // wipe out dentry
     inode_t par_inode;
-    fs_read_inode(&par_inode, tmp_inode.pino);
+    fs_read_inode(&par_inode, pino);
     fs_mk_dentry(&par_inode, I_TYPE == I_FILE ? D_FILE : D_DIR, name, tmp_inode.ino, FS_MKDENTRY_DEL);
     if (I_TYPE == I_DIR){
         par_inode.link_cnt--;       // '..'
@@ -810,9 +810,15 @@ int do_rmdir(char *path){
         return 0;
     }
 
-    int cur_ino = walk_path(path, 0);
-    if (cur_ino == -1)
+    int par_ino = walk_path(path, 1);
+    if (par_ino == -1)
         return 0;
+
+    int cur_ino = fs_dentry_lookup(dir[dir_dep - 1], par_ino, D_DIR);
+    if (cur_ino == -1){
+        printk("[FS] Error: unknown dir: %s\n", dir[dir_dep - 1]);
+        return 0;
+    }
     inode_t tmp_inode;
     fs_read_inode(&tmp_inode, cur_ino);
     if (tmp_inode.type != I_DIR){
@@ -831,7 +837,7 @@ int do_rmdir(char *path){
     }
 
     // delte
-    fs_del(cur_ino, I_DIR, dir[dir_dep - 1]);
+    fs_del(par_ino, cur_ino, I_DIR, dir[dir_dep - 1]);
     return 1;
 }
 
@@ -887,18 +893,24 @@ int do_rm(char *path){
         return 0;
     }
 
-    int cur_ino = walk_path(path, 0);
-    if (cur_ino == -1)
+    int par_ino = walk_path(path, 1);
+    if (par_ino == -1)
         return 0;
+
+    int cur_ino = fs_dentry_lookup(dir[dir_dep - 1], par_ino, D_FILE);
+    if (cur_ino == -1){
+        printk("[FS] Error: unknown file: %s\n", dir[dir_dep - 1]);
+        return 0;
+    }
     inode_t tmp_inode;
     fs_read_inode(&tmp_inode, cur_ino);
     if (tmp_inode.type != I_FILE){
-        printk("[FS] Error: %s is not a file.\n");
+        printk("[FS] Error: %s is not a file.\n", dir[dir_dep - 1]);
         return 0;
     }
 
     // delte
-    fs_del(cur_ino, I_FILE, dir[dir_dep - 1]);
+    fs_del(par_ino, cur_ino, I_FILE, dir[dir_dep - 1]);
     return 1;
 }
 
