@@ -209,7 +209,7 @@ int walkthrough_index(int target_lev, int *index_list, int lev0_num, int cur_lev
     }
     else {
         char wk_blk[FS_BLOCK_SIZE];
-        for (int i = 0, data_sec; i < ITE_BOUND; i++){
+        for (int i = 0, data_sec; i < ITE_BOUND && rtv == -1; i++){
             if (index_list[i] == 0 && mode == FS_WALK_ADD){
                 data_sec = alloc_datablk();
                 index_list[i] = data_sec;
@@ -909,6 +909,14 @@ int do_rm(char *path){
         return 0;
     }
 
+    // check fdtable
+    for (int i = 0; i < NUM_FDESCS; i++){
+        if (fdtable[i].ino == cur_ino){
+            printk("[FS] Error: File occupied.\n");
+            return 0;
+        }
+    }
+
     // delte
     fs_del(par_ino, cur_ino, I_FILE, dir[dir_dep - 1]);
     return 1;
@@ -1116,9 +1124,14 @@ int do_lseek(int fd, int offset, int whence, int rw){
     }
     if (whence == SEEK_END)
         offset += tmp_inode.file_size;
-
-    for (int tmp_sz = tmp_inode.file_size; tmp_sz < offset; tmp_sz += FS_BLOCK_SIZE){
-        if (fs_addBlk_ptr(&tmp_inode) == -1)    return -1;       // allocate fail 
+    
+    if (offset > tmp_inode.file_size){
+        printk("[FS] Appending...\n");
+        for (int tmp_sz = tmp_inode.file_size; tmp_sz < offset; tmp_sz += FS_BLOCK_SIZE){
+            if (fs_addBlk_ptr(&tmp_inode) == -1)    return -1;       // allocate fail 
+            screen_move_cursor_c(-SCREEN_WIDTH, -1);
+            printk("[FS] Appending... (%d/%d)\n", (tmp_sz - tmp_inode.file_size)/FS_BLOCK_SIZE + 1, (offset - tmp_inode.file_size)/FS_BLOCK_SIZE);
+        }
     }
 
     if (rw == SEEK_RP)
@@ -1126,5 +1139,7 @@ int do_lseek(int fd, int offset, int whence, int rw){
     else
         fdtable[fd].wp = offset;
     tmp_inode.file_size = tmp_inode.file_size > offset ? tmp_inode.file_size : offset;
+    tmp_inode.modify_time = get_timer();
+    fs_write_inode(&tmp_inode, tmp_inode.ino);
     return offset;
 }

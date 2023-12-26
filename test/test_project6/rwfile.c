@@ -9,7 +9,7 @@ int main(void)
     int fd = sys_fopen("1.txt", O_RDWR);
 
     if (fd == -1){
-        printf("file doesn't exist, exiting...\n");
+        printf("[rwfile] File doesn't exist, exiting...\n");
         return 0;
     }
 
