@@ -142,6 +142,8 @@ extern fsdesc_t fdtable[NUM_FDESCS];
 #define FS_WALK_DEL 1
 #define FS_WALK_QUERY 2
 
+extern void init_fdtab();
+
 extern void fs_read_block(int sec_offset, void *dest);
 extern void fs_write_block(int sec_offset, void *src);
 extern void fs_read_sector(int sec_offset, void *dest);

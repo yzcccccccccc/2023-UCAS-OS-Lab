@@ -17,6 +17,11 @@
 
 fsdesc_t fdtable[NUM_FDESCS];
 
+void init_fdtab(){
+    for (int i = 0; i < NUM_FDESCS; i++)
+        fdtable[i].ino = -1;
+}
+
 super_block_t SuperBlock;
 int datamap_id = -1;
 int inodemap_valid = 0;
@@ -460,9 +465,7 @@ void do_mkfs(int force){
         }*/
 
         // Reset FDESC
-        for (int i = 0; i < NUM_FDESCS; i++){
-            fdtable[i].ino = -1;
-        }
+        init_fdtab();
 
         // Create Root Dir
         printk("[FS] Setting root dir ...\n");

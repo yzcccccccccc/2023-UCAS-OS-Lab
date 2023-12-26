@@ -33,7 +33,7 @@ MINICOM         = minicom
 # Build/Debug Flags and Variables
 # -----------------------------------------------------------------------
 
-CFLAGS          = -O0 -fno-builtin -nostdlib -nostdinc -Wall -mcmodel=medany -ggdb3
+CFLAGS          = -O2 -fno-builtin -nostdlib -nostdinc -Wall -mcmodel=medany -ggdb3
 
 BOOT_INCLUDE    = -I$(DIR_ARCH)/include
 BOOT_CFLAGS     = $(CFLAGS) $(BOOT_INCLUDE) -Wl,--defsym=TEXT_START=$(BOOTLOADER_ENTRYPOINT) -T riscv.lds
@@ -204,6 +204,6 @@ $(ELF_CREATEIMAGE): $(SRC_CREATEIMAGE)
 
 image: $(ELF_CREATEIMAGE) $(ELF_BOOT) $(ELF_MAIN) $(ELF_USER)
 	cd $(DIR_BUILD) && ./$(<F) --extended $(filter-out $(<F), $(^F))	\
-	&& dd if=/dev/zero of=image oflag=append conv=notrunc bs=5GB count=1
+#	&& dd if=/dev/zero of=image oflag=append conv=notrunc bs=5GB count=1
 
 .PHONY: image

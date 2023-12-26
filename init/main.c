@@ -341,6 +341,10 @@ int main(void)
         init_syscall();
         printk("> [INIT] System call initialized successfully.\n");
 
+        // Init fdtable
+        init_fdtab();
+        printk("> [INIT] FdTable initialized successfully.\n");
+
         // [p3-multicore] init kernel_lock
         smp_init();
         printk("> [INIT] kernel_lock initialization succeeded.\n");

@@ -17,7 +17,7 @@ int main(int argc, char *argv[]){
     int fd = sys_fopen("genshin", O_RDWR);
 
     if (fd == -1){
-        printf("[lf-test] File doesn't exist, exiting...\n");
+        printf("[lf-test] Fail to open file, exiting...\n");
         return 0;
     }
 

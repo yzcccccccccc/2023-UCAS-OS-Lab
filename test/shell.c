@@ -375,7 +375,7 @@ int main(void)
 {
     sys_move_cursor(0, SHELL_BEGIN);
     printf("------------------------------- COMMAND -------------------------------\n");
-    sys_mkfs(1);
+    sys_mkfs(0);
     printf("> root@UCAS_OS: ");
 
     int ch;
