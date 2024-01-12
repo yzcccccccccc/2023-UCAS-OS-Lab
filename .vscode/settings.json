@@ -1,0 +1,9 @@
+{
+    "files.associations": {
+        "typeinfo": "c",
+        "kernel.h": "c",
+        "stdint.h": "c",
+        "syscall.h": "c",
+        "unistd.h": "c"
+    },
+}
