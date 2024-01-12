@@ -43,7 +43,7 @@
 # 运行：
 make run-net  
 # 调试：
-meke debug-net
+make debug-net
 ```  
 笔者使用教学组提供的虚拟机环境。调试时若想要使用pktRxTx小程序，可在虚拟机中对应目录位置执行`sudo ./pktRxTx -m + 参数`，需要注意请务必按照小程序的说明完整配置环境。  
 **板卡**
